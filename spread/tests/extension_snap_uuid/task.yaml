@@ -1,0 +1,80 @@
+summary: Upstream vsql-uuid as an extension snap, plus provider precedence
+
+execute: |
+  UUID_SNAP="$(ls "${PROJECT_PATH}"/extensions/villagesql-uuid/villagesql-uuid_*.snap 2>/dev/null | head -1)"
+  HELLO_SNAP="$(ls "${PROJECT_PATH}"/extensions/villagesql-hello/villagesql-hello_*.snap 2>/dev/null | head -1)"
+  if [ -z "$UUID_SNAP" ] || [ -z "$HELLO_SNAP" ]; then
+    echo "ERROR: need extensions/villagesql-uuid/*.snap and extensions/villagesql-hello/*.snap (snapcraft pack there)" >&2
+    exit 1
+  fi
+  INV=/var/snap/villagesql/common/veb/INVENTORY
+  MYSQL="villagesql.mysql -uroot -N"
+  restart() {
+    snap restart villagesql
+    timeout 90 /bin/bash -c \
+      "while ! villagesql.mysqladmin -uroot ping >/dev/null 2>&1; do echo Waiting for villagesql...; sleep 1; done"
+  }
+
+  echo "Installing and connecting vsql-uuid..."
+  snap install "$UUID_SNAP" --dangerous
+  snap connect villagesql:extensions villagesql-uuid:extensions
+  restart
+  grep -P "^vsql_uuid\.veb\tsnap:uuid\t0\.0\.6$" "$INV"
+  $MYSQL -e "INSTALL EXTENSION vsql_uuid;"
+  villagesql.extensions list | grep -E "^vsql_uuid\s+0\.0\.6\s+snap:uuid\s+yes$"
+
+  echo "Using the UUID type and functions..."
+  $MYSQL -e "SELECT UUID_VERSION(UUID_V4());" | grep -x 4
+  $MYSQL -e "SELECT UUID_VERSION(UUID_V7());" | grep -x 7
+  $MYSQL -e "SELECT UUID_IS_VALID('not-a-uuid');" | grep -x 0
+  # UUID v7 sorts by creation time at millisecond resolution: insert the
+  # rows a few milliseconds apart so that ORDER BY id is deterministic.
+  $MYSQL -e "
+    CREATE DATABASE u;
+    CREATE TABLE u.users (id UUID PRIMARY KEY, name VARCHAR(40));
+    INSERT INTO u.users VALUES (UUID_V7(), 'Ada');
+    DO SLEEP(0.05);
+    INSERT INTO u.users VALUES (UUID_V7(), 'Grace');
+  "
+  $MYSQL -e "SELECT COUNT(*) FROM u.users;" | grep -x 2
+  $MYSQL -e "SELECT name FROM u.users ORDER BY id;" | head -1 | grep -x Ada
+  $MYSQL -e "SELECT DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA='u' AND COLUMN_NAME='id';" | grep -qi uuid
+
+  echo "Precedence: a second provider of the same bundle is ignored..."
+  snap install "$HELLO_SNAP" --dangerous
+  snap connect villagesql:extensions villagesql-hello:extensions
+  # Repack the hello snap under another name to get a second provider of vsql_hello.veb
+  rm -rf /tmp/hello2 && unsquashfs -q -d /tmp/hello2 "$HELLO_SNAP"
+  sed -i 's/^name: villagesql-hello$/name: villagesql-hello2/' /tmp/hello2/meta/snap.yaml
+  mv /tmp/hello2/hello /tmp/hello2/hello2
+  sed -i 's#\$SNAP/hello$#$SNAP/hello2#; s#- \$SNAP/hello$#- $SNAP/hello2#' /tmp/hello2/meta/snap.yaml
+  grep -n 'hello2' /tmp/hello2/meta/snap.yaml
+  snap pack /tmp/hello2 /tmp/ --filename hello2.snap
+  snap install /tmp/hello2.snap --dangerous
+  snap connect villagesql:extensions villagesql-hello2:extensions
+  restart
+  cat "$INV"
+  grep -P "^vsql_hello\.veb\tsnap:hello\t1\.0\.0$" "$INV"
+  grep -F "# vsql_hello.veb from snap:hello2 ignored: already provided by snap:hello" "$INV"
+  villagesql.extensions list | grep -F "note: vsql_hello.veb from snap:hello2 ignored"
+  $MYSQL -e "INSTALL EXTENSION vsql_hello;"
+  $MYSQL -e "SELECT hello('uuid');" | grep -x "Hello, uuid!"
+
+  echo "Removing the first provider: the second one takes over after restart..."
+  $MYSQL -e "UNINSTALL EXTENSION vsql_hello;"
+  snap remove villagesql-hello
+  restart
+  grep -P "^vsql_hello\.veb\tsnap:hello2\t1\.0\.0$" "$INV"
+  $MYSQL -e "INSTALL EXTENSION vsql_hello;"
+  $MYSQL -e "SELECT shout('ok');" | grep -x "OK!"
+
+  echo "Built-in bundles cannot be shadowed by a snap..."
+  grep -P "^vsql_simple\.veb\tbuilt-in\t" "$INV"
+
+  echo "Extension snap uuid test completed."
+
+restore: |
+  snap remove villagesql-uuid 2>/dev/null || true
+  snap remove villagesql-hello 2>/dev/null || true
+  snap remove villagesql-hello2 2>/dev/null || true
+  rm -rf /tmp/hello2 /tmp/hello2.snap
