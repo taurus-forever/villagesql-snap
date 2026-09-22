@@ -1,0 +1,147 @@
+name: villagesql
+base: core26
+version: '8.4.11-0.0.6'
+summary: VillageSQL (MySQL 8.4 with extensions) in a snap.
+description: |
+  VillageSQL Server for MySQL is an open-source, drop-in replacement for
+  MySQL 8.4 that adds an extension framework: custom data types and
+  functions are loaded at run time with INSTALL EXTENSION. This snap builds
+  VillageSQL from source and lets extensions be shipped as separate snaps
+  connected through the content interface.
+title: VillageSQL
+contact: https://matrix.to/#/#charmhub-data-platform:ubuntu.com
+license: "Apache-2.0 AND GPL-2.0"
+issues: https://github.com/taurus-forever/villagesql-snap/issues
+source-code: https://github.com/taurus-forever/villagesql-snap
+website: https://villagesql.com
+
+platforms:
+  amd64:
+  arm64:
+grade: stable
+confinement: strict
+
+system-usernames:
+  _daemon_: shared
+
+hooks:
+  install:
+    plugs:
+      - network
+
+apps:
+  villagesql:
+    command: bin/mysqld.sh
+    daemon: simple
+    plugs:
+      - network
+      - network-bind
+      # Optional, not auto-connected: lets InnoDB set thread priorities and
+      # CPU affinity. Without it those calls fail silently at start-up and
+      # snapd logs a few harmless seccomp audit lines in the kernel log.
+      - process-control
+  mysql:
+    command: bin/client.sh mysql
+    plugs:
+      - network
+      - home
+  mysqladmin:
+    command: bin/client.sh mysqladmin
+    plugs:
+      - network
+  mysqldump:
+    command: bin/client.sh mysqldump
+    plugs:
+      - network
+      - home
+  mysqlbinlog:
+    command: bin/client.sh mysqlbinlog
+    plugs:
+      - network
+      - home
+  mysqlcheck:
+    command: bin/client.sh mysqlcheck
+    plugs:
+      - network
+  config:
+    command: usr/bin/villagesql_config
+
+parts:
+  villagesql:
+    plugin: cmake
+    source: https://github.com/villagesql/villagesql-server.git
+    source-tag: release/0.0.6
+    source-depth: 1
+    cmake-generator: Ninja
+    cmake-parameters:
+      - -DCMAKE_INSTALL_PREFIX=/usr
+      - -DCMAKE_BUILD_TYPE=Release
+      - -DWITH_SSL=system
+      - -DWITH_UNIT_TESTS=OFF
+      - -DWITH_ROUTER=OFF
+      - -DWITH_NDB=OFF
+      - -DMYSQL_MAINTAINER_MODE=OFF
+      - -DVILLAGESQL_WERROR=OFF
+      - -DINSTALL_LAYOUT=STANDALONE
+      - -DVSQL_PRE_RELEASE_VERSION=
+      - -DCOMPILATION_COMMENT=VillageSQL snap
+      - -DCOMPILATION_COMMENT_SERVER=VillageSQL snap
+    build-packages:
+      - bison
+      - build-essential
+      - ccache
+      - curl
+      - g++
+      - libaio-dev
+      - libncurses-dev
+      - libnuma-dev
+      - libssl-dev
+      - libtirpc-dev
+      - libz-dev
+      - pkg-config
+      - unzip
+      - zip
+    stage-packages:
+      - libaio1t64
+      - libnuma1
+      - libssl3t64
+      - libtirpc3t64
+      - util-linux
+    override-pull: |
+      craftctl default
+      # MySQL Cluster (NDB) is not built (WITH_NDB=OFF) but upstream still
+      # compiles its client library whenever the directory exists.
+      rm -rf storage/ndb
+    override-build: |
+      craftctl default
+      # Strip the server and clients: unstripped binaries would make the
+      # snap several hundred MB.
+      find "$CRAFT_PART_INSTALL/usr/bin" "$CRAFT_PART_INSTALL/usr/lib" \
+        -type f \( -name '*.so*' -o -perm -u+x \) \
+        -exec strip --strip-unneeded {} + 2>/dev/null || true
+    prime:
+      - -usr/mysql-test
+      - -usr/docs
+      - -usr/man
+      - -usr/lib/*.a
+      - -usr/bin/mysql_client_test
+      - -usr/bin/mysqltest*
+      - -usr/bin/mysqlxtest
+      - -usr/bin/mysqld-debug
+    organize:
+      usr/LICENSE: licenses/LICENSE-villagesql
+      usr/README: licenses/README-villagesql
+  snap-license:
+    plugin: dump
+    source: .
+    source-type: local
+    stage:
+      - licenses/LICENSE-snap
+    organize:
+      LICENSE: licenses/LICENSE-snap
+  wrapper:
+    plugin: dump
+    source: snap/local
+    organize:
+      mysqld.sh: bin/mysqld.sh
+      client.sh: bin/client.sh

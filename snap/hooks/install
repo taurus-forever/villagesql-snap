@@ -1,0 +1,56 @@
+#!/bin/bash
+# $SNAP        = /snap/villagesql/<revision>   # read-only at run time
+# $SNAP_COMMON = /var/snap/villagesql/common   # read-write, shared by revisions
+set -euo pipefail
+
+DAEMON_UID=584792  # _daemon_ (system-usernames)
+
+as_daemon() {
+  "$SNAP/usr/bin/setpriv" --clear-groups --reuid _daemon_ --regid root -- "$@"
+}
+
+# On failure show the server log in the hook output (`snap tasks <id>`) since
+# snapd removes $SNAP_COMMON of a failed first install.
+on_error() {
+  echo "ERROR: install hook failed; tail of $SNAP_COMMON/log/error.log:" >&2
+  tail -n 40 "$SNAP_COMMON/log/error.log" >&2 2>/dev/null || true
+}
+trap '[ $? -eq 0 ] || on_error' EXIT
+
+# snapd runs hooks with systemd's NOTIFY_SOCKET in the environment; mysqld
+# would try to use it and be denied by confinement (harmless but noisy).
+unset NOTIFY_SOCKET
+
+# Modes come from the umask, not chmod (core26's coreutils chmod uses a
+# syscall that snapd's seccomp filter rejects): 644/755 for config so that
+# clients running as any user can read it, 750 _daemon_:root for the data
+# directory. Group root keeps it traversable for the hooks: inside the
+# sandbox root has no dac_override, so a 700 directory owned by _daemon_
+# would be opaque to them (`[ -d data/mysql ]` would always be false).
+umask 022
+mkdir -p "$SNAP_COMMON/etc/conf.d" "$SNAP_COMMON/log" "$SNAP_COMMON/veb"
+(umask 027; mkdir -p "$SNAP_COMMON/data")
+if [ ! -f "$SNAP_COMMON/etc/my.cnf" ]; then
+  sed "s#@SNAP_COMMON@#$SNAP_COMMON#g" "$SNAP/default-config/my.cnf" > "$SNAP_COMMON/etc/my.cnf"
+fi
+# Not recursive on data/: its contents are created by mysqld as _daemon_.
+chown "$DAEMON_UID:root" "$SNAP_COMMON/data"
+chown -R "$DAEMON_UID:root" "$SNAP_COMMON/log" "$SNAP_COMMON/veb"
+
+MYSQLD=(
+  "$SNAP/usr/bin/mysqld"
+  --defaults-file="$SNAP_COMMON/etc/my.cnf"
+  --basedir="$SNAP/usr"
+  --datadir="$SNAP_COMMON/data"
+  --log-error="$SNAP_COMMON/log/error.log"
+)
+
+if [ ! -d "$SNAP_COMMON/data/mysql" ]; then
+  echo "Initializing the VillageSQL data directory (root@localhost uses auth_socket)..."
+  # init.sql runs as part of the initialization, so no temporary server is
+  # needed (a hook without network-bind cannot listen() on a socket anyway).
+  as_daemon "${MYSQLD[@]}" --initialize-insecure \
+    --init-file="$SNAP/default-config/init.sql"
+fi
+
+echo "$SNAP_VERSION" | cut -d. -f1-2 > "$SNAP_COMMON/.snap-data-major"
