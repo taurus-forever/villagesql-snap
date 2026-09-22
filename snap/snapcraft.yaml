@@ -141,6 +141,9 @@ parts:
       - -usr/docs
       - -usr/man
       - -usr/lib/*.a
+      # Nothing in the snap links to the shared client library (the tools use
+      # the static one) and extensions use the VEF ABI: drop it (lint warning).
+      - -usr/lib/libmysqlclient.so*
       - -usr/bin/mysql_client_test
       - -usr/bin/mysqltest*
       - -usr/bin/mysqlxtest
