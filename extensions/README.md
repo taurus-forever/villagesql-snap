@@ -12,8 +12,14 @@ snapcraft pack
 sudo snap install ./villagesql-hello_*.snap --dangerous
 sudo snap connect villagesql:extensions villagesql-hello:extensions
 sudo snap restart villagesql
-sudo villagesql.extensions list
+sudo villagesql.extensions list                        # vsql_hello  snap:hello  INSTALLED no
+sudo villagesql.mysql -uroot -e "INSTALL EXTENSION vsql_hello; SELECT hello('snap'), shout('snap');"
 ```
+
+Connecting a provider only makes its bundle visible to the server; like
+`CREATE EXTENSION` in PostgreSQL, `INSTALL EXTENSION <name>;` registers it,
+and functions are then called inside a query: `SELECT hello('snap');`.
+Before disconnecting or removing a provider, run `UNINSTALL EXTENSION <name>;`.
 
 * `villagesql-hello`: a from-scratch C++ extension (`hello()`, `shout()`).
 * `villagesql-uuid`: packages the upstream
