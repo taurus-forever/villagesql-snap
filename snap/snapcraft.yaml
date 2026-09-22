@@ -29,6 +29,7 @@ hooks:
     plugs:
       - network
   configure: {}
+  post-refresh: {}
 
 apps:
   villagesql:

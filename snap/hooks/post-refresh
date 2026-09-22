@@ -1,0 +1,30 @@
+#!/bin/sh
+# Abort refreshes that would run a different MySQL major on the existing
+# data directory. A non-zero exit makes snapd roll back to the previous
+# revision. Minor upgrades (8.4.x -> 8.4.y) are handled by mysqld itself at
+# start-up (--upgrade=AUTO). No epoch is used, for the same reason as in
+# postgresql-snap: a future in-place major upgrade should not have to step
+# through every intermediate major.
+set -eu
+
+datadir="$SNAP_COMMON/data"
+marker="$SNAP_COMMON/.snap-data-major"
+new="$(echo "$SNAP_VERSION" | cut -d. -f1-2)"
+
+if [ ! -d "$datadir/mysql" ]; then
+  echo "ERROR: No initialized data directory in $datadir. Refresh aborted, rolling back." >&2
+  exit 1
+fi
+
+if [ ! -f "$marker" ]; then
+  echo "ERROR: $marker not found, cannot tell which MySQL major the data belongs to. Refresh aborted, rolling back." >&2
+  exit 1
+fi
+
+old="$(cat "$marker")"
+if [ "$old" != "$new" ]; then
+  echo "ERROR: Data in $datadir is from MySQL $old but this revision provides $new. \
+In-place major upgrades are not supported: dump with villagesql.mysqldump, install the \
+new track and restore. Refresh aborted, rolling back." >&2
+  exit 1
+fi

@@ -1,0 +1,30 @@
+summary: Data directory can live on external storage (bind mount)
+
+execute: |
+  echo "Creating test data..."
+  villagesql.mysql -uroot -e "CREATE DATABASE storage; CREATE TABLE storage.t (id INT); INSERT INTO storage.t VALUES (7);"
+
+  echo "Stop VillageSQL to move data..."
+  snap stop villagesql.villagesql
+  mkdir -p /srv/myvsqldata/data /srv/myvsqldata/log
+  cp -a /var/snap/villagesql/common/data/. /srv/myvsqldata/data/
+  cp -a /var/snap/villagesql/common/log/. /srv/myvsqldata/log/
+
+  echo "Mount the storage inside the snap's common dir..."
+  mount --bind /srv/myvsqldata/data /var/snap/villagesql/common/data
+  mount --bind /srv/myvsqldata/log /var/snap/villagesql/common/log
+
+  echo "Start VillageSQL..."
+  snap start villagesql.villagesql
+  timeout 90 /bin/bash -c \
+    "while ! villagesql.mysqladmin -uroot ping >/dev/null 2>&1; do sleep 1; done"
+  villagesql.mysql -uroot -N -e "SELECT id FROM storage.t;" | grep -x 7
+  villagesql.mysql -uroot -e "INSERT INTO storage.t VALUES (8);"
+  test -n "$(ls /srv/myvsqldata/data/storage/)"
+
+  echo "Cleaning mounts so the snap can be purged on restore..."
+  snap stop villagesql.villagesql
+  umount /var/snap/villagesql/common/data
+  umount /var/snap/villagesql/common/log
+
+  echo "Storage test completed."
