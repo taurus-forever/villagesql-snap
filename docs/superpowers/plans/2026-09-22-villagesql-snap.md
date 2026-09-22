@@ -826,7 +826,7 @@ Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
 **Interfaces:**
 - Produces: `snap set villagesql port=<int> bind-address=<addr> max-connections=<int>` rendered into `$SNAP_COMMON/etc/conf.d/00-snap.cnf` with `[mysqld]` `port`, `bind_address`, `max_connections` and `[client]` `port`.
 
-- [ ] **Step 1: Write `snap/hooks/configure`**
+- [x] **Step 1: Write `snap/hooks/configure`**
 
 ```bash
 #!/bin/bash
@@ -883,7 +883,7 @@ if snapctl services villagesql.villagesql 2>/dev/null | grep -qE "\sactive\s*$";
 fi
 ```
 
-- [ ] **Step 2: Declare the hook in `snap/snapcraft.yaml`**
+- [x] **Step 2: Declare the hook in `snap/snapcraft.yaml`**
 
 Under `hooks:` add:
 
@@ -893,7 +893,7 @@ Under `hooks:` add:
 
 and `chmod +x snap/hooks/configure`.
 
-- [ ] **Step 3: Write `spread/tests/config/task.yaml`**
+- [x] **Step 3: Write `spread/tests/config/task.yaml`**
 
 ```yaml
 summary: snap set options and conf.d snippets reach the server
@@ -948,7 +948,7 @@ execute: |
   echo "Config test completed."
 ```
 
-- [ ] **Step 4: Write `docs/configuration.md`**
+- [x] **Step 4: Write `docs/configuration.md`**
 
 ```markdown
 # Configuration
@@ -995,7 +995,7 @@ what the `storage` spread test does).
 The X Plugin (`mysqlx`, port 33060) is off by default.
 ```
 
-- [ ] **Step 5: Rebuild, run the config and smoke tests**
+- [x] **Step 5: Rebuild, run the config and smoke tests**
 
 ```bash
 snapcraft pack     # only the wrapper/hook parts rebuild; cmake part is cached
@@ -1004,7 +1004,7 @@ snapcraft test -- craft:ubuntu-24.04:spread/tests/config craft:ubuntu-24.04:spre
 
 Expected: both successful.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add snap/hooks/configure snap/snapcraft.yaml spread/tests/config docs/configuration.md README.md
@@ -1028,7 +1028,7 @@ Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
 **Interfaces:**
 - Consumes: `$SNAP_COMMON/.snap-data-major` written by `mysqld.sh` and the install hook (Task 1).
 
-- [ ] **Step 1: Write `snap/hooks/post-refresh`**
+- [x] **Step 1: Write `snap/hooks/post-refresh`**
 
 ```bash
 #!/bin/sh
@@ -1065,7 +1065,7 @@ fi
 
 Declare it in `snap/snapcraft.yaml` under `hooks:` as `post-refresh: {}` and `chmod +x snap/hooks/post-refresh`.
 
-- [ ] **Step 2: Write `spread/tests/refresh/task.yaml`**
+- [x] **Step 2: Write `spread/tests/refresh/task.yaml`**
 
 ```yaml
 summary: In-place refresh keeps data and the service running
@@ -1119,7 +1119,7 @@ execute: |
   echo "Test refresh completed."
 ```
 
-- [ ] **Step 3: Write `spread/tests/refresh_major_guard/task.yaml`**
+- [x] **Step 3: Write `spread/tests/refresh_major_guard/task.yaml`**
 
 ```yaml
 summary: A refresh onto data from another MySQL major is rolled back
@@ -1151,7 +1151,7 @@ execute: |
   grep -x "8.4" /var/snap/villagesql/common/.snap-data-major || echo "8.4" > /var/snap/villagesql/common/.snap-data-major
 ```
 
-- [ ] **Step 4: Write `spread/tests/storage/task.yaml`**
+- [x] **Step 4: Write `spread/tests/storage/task.yaml`**
 
 ```yaml
 summary: Data directory can live on external storage (bind mount)
@@ -1186,7 +1186,7 @@ execute: |
   echo "Storage test completed."
 ```
 
-- [ ] **Step 5: Write `docs/refresh.md`**
+- [x] **Step 5: Write `docs/refresh.md`**
 
 ```markdown
 # Refresh (upgrades)
@@ -1223,7 +1223,7 @@ data dictionary may already have been upgraded by the newer minor, prefer a
 dump taken before the refresh if the revert fails to start.
 ```
 
-- [ ] **Step 6: Rebuild and run the three tests**
+- [x] **Step 6: Rebuild and run the three tests**
 
 ```bash
 snapcraft pack
@@ -1232,7 +1232,7 @@ snapcraft test -- craft:ubuntu-24.04:spread/tests/refresh craft:ubuntu-24.04:spr
 
 Expected: successful. If `snap install` of the same file does not create a new revision, check with `snap list villagesql` that the revision increments (x1 to x2); `--dangerous` installs always do.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add snap/hooks/post-refresh snap/snapcraft.yaml spread/tests/refresh spread/tests/refresh_major_guard spread/tests/storage docs/refresh.md
@@ -1257,7 +1257,7 @@ Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
 - Produces: `$SNAP_COMMON/veb/*.veb` (effective `veb_dir`), `$SNAP_COMMON/veb/INVENTORY` (`<file>\t<origin>\t<version>` lines, `#` comments), app `villagesql.extensions list`.
 - Contract for providers (Tasks 7 and 8): `$SNAP/extensions/<dir>/veb/<name>.veb` and optional `$SNAP/extensions/<dir>/manifest` with `VERSION=<x.y.z>`.
 
-- [ ] **Step 1: Write `snap/local/extensions-env.sh`**
+- [x] **Step 1: Write `snap/local/extensions-env.sh`**
 
 ```bash
 #!/bin/bash
@@ -1337,7 +1337,7 @@ done
 mv -f "$VEB_DIR/INVENTORY.tmp" "$VEB_DIR/INVENTORY"
 ```
 
-- [ ] **Step 2: Write `snap/local/extensions.sh`**
+- [x] **Step 2: Write `snap/local/extensions.sh`**
 
 ```bash
 #!/bin/bash
@@ -1396,7 +1396,7 @@ if [ -n "$notes" ]; then
 fi
 ```
 
-- [ ] **Step 3: Wire it into the snap**
+- [x] **Step 3: Wire it into the snap**
 
 In `snap/local/mysqld.sh` add the option line `--veb-dir="$SNAP_COMMON/veb" \` after `--log-error=...` (keep the backslash continuation valid).
 
@@ -1453,7 +1453,7 @@ and extend the `wrapper` part:
 
 `chmod +x snap/local/extensions-env.sh snap/local/extensions.sh`.
 
-- [ ] **Step 4: Write `spread/tests/extensions_builtin/task.yaml`**
+- [x] **Step 4: Write `spread/tests/extensions_builtin/task.yaml`**
 
 ```yaml
 summary: Built-in extension bundles are visible, installable and listed
@@ -1495,7 +1495,7 @@ execute: |
 
 If the bundle's function is not `rot13` (check `tar -xOf vsql_simple.veb manifest.json` and the upstream `villagesql/examples/vsql-simple/src/extension.cc`), use one that exists.
 
-- [ ] **Step 5: Write `docs/extensions.md`**
+- [x] **Step 5: Write `docs/extensions.md`**
 
 ```markdown
 # Extensions
@@ -1576,7 +1576,7 @@ no server build is needed, a provider builds in seconds. See
 `extensions/villagesql-uuid` for packaging an upstream extension repository.
 ```
 
-- [ ] **Step 6: Rebuild, run the builtin test and the smoke test**
+- [x] **Step 6: Rebuild, run the builtin test and the smoke test**
 
 ```bash
 snapcraft pack
@@ -1585,7 +1585,7 @@ snapcraft test -- craft:ubuntu-24.04:spread/tests/extensions_builtin craft:ubunt
 
 Expected: successful. Also update `spread/tests/smoke/task.yaml` to add `villagesql.extensions --help >/dev/null` to the tool list.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add snap/ spread/tests/extensions_builtin spread/tests/smoke docs/extensions.md
@@ -1603,7 +1603,7 @@ Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
 - Consumes: provider contract from Task 6.
 - Produces: snap `villagesql-hello` slot `extensions`, bundle `vsql_hello.veb` with SQL functions `hello(STRING) -> STRING` and `shout(STRING) -> STRING`.
 
-- [ ] **Step 1: Write `extensions/villagesql-hello/manifest.json`**
+- [x] **Step 1: Write `extensions/villagesql-hello/manifest.json`**
 
 ```json
 {
@@ -1615,7 +1615,7 @@ Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
 }
 ```
 
-- [ ] **Step 2: Write `extensions/villagesql-hello/src/extension.cc`**
+- [x] **Step 2: Write `extensions/villagesql-hello/src/extension.cc`**
 
 ```cpp
 // Example VillageSQL extension (v3 SDK) shipped as a separate snap.
@@ -1666,7 +1666,7 @@ VEF_GENERATE_ENTRY_POINTS(
 
 If the SDK's `StringResult` API differs (check `sdk/include/villagesql/vsql/` headers: names like `buffer()`, `set_length()`, `set_null()`, `error()`), adapt to the header, not the other way round.
 
-- [ ] **Step 3: Write `extensions/villagesql-hello/CMakeLists.txt`**
+- [x] **Step 3: Write `extensions/villagesql-hello/CMakeLists.txt`**
 
 ```cmake
 cmake_minimum_required(VERSION 3.18)
@@ -1690,7 +1690,7 @@ VEF_CREATE_VEB(
 )
 ```
 
-- [ ] **Step 4: Write `extensions/villagesql-hello/snap/snapcraft.yaml`**
+- [x] **Step 4: Write `extensions/villagesql-hello/snap/snapcraft.yaml`**
 
 ```yaml
 name: villagesql-hello
@@ -1754,7 +1754,7 @@ parts:
 
 Copy the license: `cp LICENSE extensions/villagesql-hello/LICENSE`.
 
-- [ ] **Step 5: Write `extensions/README.md`**
+- [x] **Step 5: Write `extensions/README.md`**
 
 ```markdown
 # Extension snaps
@@ -1783,7 +1783,7 @@ The spread tests `spread/tests/extension_snap_*` expect the packed snaps next
 to their `snap/` directories.
 ```
 
-- [ ] **Step 6: Build the provider and try it by hand**
+- [x] **Step 6: Build the provider and try it by hand**
 
 ```bash
 (cd extensions/villagesql-hello && snapcraft pack)
@@ -1796,7 +1796,7 @@ sudo villagesql.mysql -uroot -e "INSTALL EXTENSION vsql_hello; SELECT hello('sna
 
 Expected: `Hello, snap!` and `SNAP!`. If `INSTALL EXTENSION` fails with a load error, read `/var/snap/villagesql/common/log/error.log`.
 
-- [ ] **Step 7: Write `spread/tests/extension_snap_hello/task.yaml`**
+- [x] **Step 7: Write `spread/tests/extension_snap_hello/task.yaml`**
 
 ```yaml
 summary: An extension shipped as a snap through the content interface
@@ -1858,7 +1858,7 @@ restore: |
   snap remove villagesql-hello 2>/dev/null || true
 ```
 
-- [ ] **Step 8: Run the test and commit**
+- [x] **Step 8: Run the test and commit**
 
 ```bash
 snapcraft test -- craft:ubuntu-24.04:spread/tests/extension_snap_hello
@@ -1876,7 +1876,7 @@ Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
 **Interfaces:**
 - Produces: snap `villagesql-uuid` slot `extensions`, bundle `vsql_uuid.veb` (upstream tag `0.0.6`) providing the `UUID` type and `UUID_V4()`, `UUID_V7()`, `UUID_VERSION()`, `UUID_IS_VALID()`.
 
-- [ ] **Step 1: Write `extensions/villagesql-uuid/snap/snapcraft.yaml`**
+- [x] **Step 1: Write `extensions/villagesql-uuid/snap/snapcraft.yaml`**
 
 ```yaml
 name: villagesql-uuid
@@ -1936,7 +1936,7 @@ parts:
       install -Dm644 LICENSE "$OUT/licenses/LICENSE-vsql-uuid"
 ```
 
-- [ ] **Step 2: Build and try by hand**
+- [x] **Step 2: Build and try by hand**
 
 ```bash
 (cd extensions/villagesql-uuid && snapcraft pack)
@@ -1949,7 +1949,7 @@ sudo villagesql.mysql -uroot -e "INSTALL EXTENSION vsql_uuid; SELECT UUID_V7(), 
 
 Expected: a UUID and `4`. If `cmake` cannot find the SDK with `VillageSQL_SDK_DIR`, also pass `-DCMAKE_PREFIX_PATH="$PWD/sdk"`.
 
-- [ ] **Step 3: Write `spread/tests/extension_snap_uuid/task.yaml`**
+- [x] **Step 3: Write `spread/tests/extension_snap_uuid/task.yaml`**
 
 This test also proves precedence: a second copy of the hello provider is installed under another snap name and its bundle is ignored because the earlier provider already supplies `vsql_hello.veb`. To get a second copy with a different name, the task repacks the hello snap with `name: villagesql-hello2` using `snap pack` on the unsquashed tree.
 
@@ -2034,7 +2034,7 @@ restore: |
 
 If ordering `ORDER BY id` on a UUID column is not supported, drop that one line. If `unsquashfs` is missing on the test system, `apt-get install -y squashfs-tools` at the top of the task.
 
-- [ ] **Step 4: Run and commit**
+- [x] **Step 4: Run and commit**
 
 ```bash
 snapcraft test -- craft:ubuntu-24.04:spread/tests/extension_snap_uuid

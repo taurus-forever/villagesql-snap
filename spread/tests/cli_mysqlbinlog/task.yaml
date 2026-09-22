@@ -3,8 +3,13 @@ summary: villagesql.mysqlbinlog CLI tests
 execute: |
   echo "Binary logging is on by default in MySQL 8.4..."
   villagesql.mysql -uroot -N -e "SELECT @@log_bin;" | grep -x 1
+  CURRENT=$(villagesql.mysql -uroot -N -e "SHOW BINARY LOG STATUS;" | awk '{print $1}')
   villagesql.mysql -uroot -e "CREATE DATABASE binlogtest; CREATE TABLE binlogtest.t (id INT); INSERT INTO binlogtest.t VALUES (42);"
   villagesql.mysql -uroot -e "FLUSH BINARY LOGS;"
-  FIRST=$(villagesql.mysql -uroot -N -e "SHOW BINARY LOGS;" | head -1 | awk '{print $1}')
-  echo "Reading $FIRST with mysqlbinlog..."
-  villagesql.mysqlbinlog --verbose "/var/snap/villagesql/common/data/$FIRST" | grep -i "binlogtest"
+  echo "Reading $CURRENT with mysqlbinlog..."
+  if ! villagesql.mysqlbinlog --verbose "/var/snap/villagesql/common/data/$CURRENT" > /tmp/binlog.txt 2>&1; then
+    cat /tmp/binlog.txt
+    echo "ERROR: mysqlbinlog failed" >&2
+    exit 1
+  fi
+  grep -i "binlogtest" /tmp/binlog.txt

@@ -37,13 +37,15 @@ One `cmake` part, `villagesql`, builds the server from the tag with the
 packages listed in upstream's `villagesql/bld_tools/setup_linux_build_env.sh`
 as `build-packages`. CMake flags: `-DCMAKE_BUILD_TYPE=Release`,
 `-DWITH_SSL=system`, `-DWITH_UNIT_TESTS=OFF`, `-DWITH_ROUTER=OFF`,
-`-DINSTALL_LAYOUT=STANDALONE`, `-DCMAKE_INSTALL_PREFIX=/`. `make install`
+`-DINSTALL_LAYOUT=STANDALONE`, `-DCMAKE_INSTALL_PREFIX=/usr`, `-DVILLAGESQL_WERROR=OFF`
+(GCC 15 on core26 otherwise turns warnings into errors), with the unused
+`storage/ndb` subtree removed at pull time. `make install`
 produces `bin/`, `lib/`, `lib/veb/` (bundled `vsql_simple` and `vsql_complex`
 bundles), `share/` and the extension SDK (`include/villagesql`, `bin/villagesql_config`,
 `lib/cmake/VillageSQLExtensionFramework`). Binaries are stripped in
 `override-build`; `mysql-test` and docs are excluded with `prime` filters to
 keep the snap small. Runtime libraries come from `stage-packages`
-(`libaio1t64`, `libnuma1`, `libtirpc3t64`, `libssl3t64`, `libmecab2`).
+(`libaio1t64`, `libnuma1`, `libtirpc3t64`, `libssl3t64`, `util-linux` for `setpriv`).
 
 A second part, `wrapper`, dumps `snap/local/` (shell wrappers and hooks
 helpers) and creates the empty `extensions/` mount point for the content plug.
@@ -53,7 +55,7 @@ A third part, `snap-license`, stages `LICENSE` as `licenses/LICENSE-snap`.
 
 | Path | Purpose |
 | --- | --- |
-| `$SNAP_COMMON/data` | MySQL data directory (`--datadir`). Owned by `_daemon_`. |
+| `$SNAP_COMMON/data` | MySQL data directory (`--datadir`), `_daemon_:root` mode 750 so that hooks running as root can still see inside (confined root has no `dac_override`). |
 | `$SNAP_COMMON/etc/my.cnf` | Main config, generated once by the install hook; ends with `!includedir $SNAP_COMMON/etc/conf.d`. |
 | `$SNAP_COMMON/etc/conf.d/00-snap.cnf` | Written by the configure hook from `snap set` options. Not user editable. |
 | `$SNAP_COMMON/etc/conf.d/*.cnf` | Free-form administrator config. |
@@ -66,14 +68,16 @@ A third part, `snap-license`, stages `LICENSE` as `licenses/LICENSE-snap`.
 `mysqld` is started by `snap/local/mysqld.sh` as `_daemon_` with
 `--defaults-file=$SNAP_COMMON/etc/my.cnf`, `--basedir=$SNAP`,
 `--datadir=$SNAP_COMMON/data`, `--socket=/tmp/mysql.sock`,
-`--pid-file`/`--log-error` under `$SNAP_COMMON`, and `--user=_daemon_`. All
-paths are passed by the wrapper, so `my.cnf` contains only settings.
+`--pid-file` in the data directory, `--log-error` under `$SNAP_COMMON/log`,
+and `--veb-dir=$SNAP_COMMON/veb`. All paths are passed by the wrapper, so
+`my.cnf` contains only settings (it ships `bind_address = 127.0.0.1` and
+`mysqlx = OFF` as defaults).
 
 ### Apps
 
 | App | Command | Plugs |
 | --- | --- | --- |
-| `villagesql` (daemon, simple) | `mysqld.sh` via the `extensions-env.sh` command chain | `network`, `network-bind` |
+| `villagesql` (daemon, simple) | `mysqld.sh` via the `extensions-env.sh` command chain | `network`, `network-bind`, optional `process-control` (silences InnoDB setpriority seccomp audit lines) |
 | `mysql` | `mysql` client through a wrapper that adds `--defaults-file` | `network` |
 | `mysqladmin`, `mysqldump`, `mysqlbinlog`, `mysqlcheck` | the upstream binaries through the same wrapper | `network` |
 | `config` | `villagesql_config` (SDK flags for extension builders) | none |
@@ -84,15 +88,16 @@ for `root@localhost` (auth_socket) and for the daemon's helper scripts.
 
 ### Install hook
 
-1. Create `$SNAP_COMMON/{data,etc/conf.d,log,veb}`, chown to `_daemon_`.
+1. Create `$SNAP_COMMON/{data,etc/conf.d,log,veb}` with `umask` (never
+   `chmod`: core26's coreutils `chmod` is rejected by snapd's seccomp
+   filter), chown `data`, `log` and `veb` to `_daemon_`.
 2. Write `my.cnf` from `$SNAP/default-config/my.cnf`.
-3. Run `mysqld --initialize-insecure` as `_daemon_`.
-4. Start a temporary server on the socket only, run
-   `ALTER USER root@localhost IDENTIFIED WITH auth_socket;`, stop it.
-5. Write `.snap-data-major` = `8.4`.
-
-The hook plugs `network` so the temporary server can be reached over the
-socket without confinement denials.
+3. Run `mysqld --initialize-insecure --init-file=$SNAP/default-config/init.sql`
+   as `_daemon_`; `init.sql` installs the `auth_socket` plugin and runs
+   `ALTER USER root@localhost IDENTIFIED WITH auth_socket;` during the
+   initialisation, so no temporary server is started (a hook without
+   `network-bind` cannot `listen()` anyway).
+4. Write `.snap-data-major` = `8.4`.
 
 ## Configuration (step 2)
 

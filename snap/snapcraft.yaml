@@ -167,3 +167,4 @@ parts:
       client.sh: bin/client.sh
       extensions-env.sh: bin/extensions-env.sh
       extensions.sh: bin/extensions.sh
+      render-config.sh: bin/render-config.sh
