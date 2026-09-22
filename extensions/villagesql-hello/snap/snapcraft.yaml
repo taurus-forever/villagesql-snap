@@ -20,6 +20,7 @@ confinement: strict
 platforms:
   amd64:
   arm64:
+  riscv64:
 
 # Consumed by the villagesql snap's `extensions` plug. The content label
 # carries the MySQL major: a provider built for another major can never be

@@ -18,6 +18,7 @@ website: https://villagesql.com
 platforms:
   amd64:
   arm64:
+  riscv64:
 grade: stable
 confinement: strict
 
