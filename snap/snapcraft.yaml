@@ -28,6 +28,7 @@ hooks:
   install:
     plugs:
       - network
+  configure: {}
 
 apps:
   villagesql:

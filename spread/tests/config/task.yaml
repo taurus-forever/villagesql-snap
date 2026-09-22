@@ -1,0 +1,50 @@
+summary: snap set options and conf.d snippets reach the server
+
+execute: |
+  wait_for_port() {
+    timeout 90 /bin/bash -c \
+      "until villagesql.mysql -uroot -N -e 'SELECT @@port;' 2>/dev/null | grep -qx $1; do sleep 1; done"
+  }
+
+  echo "Defaults are visible in snap get..."
+  snap get villagesql port | grep -x 3306
+  snap get villagesql bind-address | grep -x 127.0.0.1
+  cat /var/snap/villagesql/common/etc/conf.d/00-snap.cnf
+
+  echo "Changing port and bind-address restarts the server with the new values..."
+  snap set villagesql port=3307 bind-address=0.0.0.0
+  wait_for_port 3307
+  villagesql.mysql -uroot -N -e "SELECT @@bind_address;" | grep -x "0.0.0.0"
+  ss -ltn | grep -E "0.0.0.0:3307\s"
+  villagesql.mysql -uroot -N -e "SELECT @@max_connections;" | grep -x 151
+
+  echo "Invalid values are rejected and the old value stays..."
+  ! snap set villagesql port=abc
+  ! snap set villagesql port=70000
+  ! snap set villagesql max-connections=0
+  ! snap set villagesql bind-address='127.0.0.1;rm -rf /'
+  snap get villagesql port | grep -x 3307
+  villagesql.mysql -uroot -N -e "SELECT @@port;" | grep -x 3307
+
+  echo "max-connections is optional and can be unset again..."
+  snap set villagesql max-connections=77
+  timeout 90 /bin/bash -c \
+    "until villagesql.mysql -uroot -N -e 'SELECT @@max_connections;' 2>/dev/null | grep -qx 77; do sleep 1; done"
+  snap unset villagesql max-connections
+  timeout 90 /bin/bash -c \
+    "until villagesql.mysql -uroot -N -e 'SELECT @@max_connections;' 2>/dev/null | grep -qx 151; do sleep 1; done"
+
+  echo "Administrator snippets in conf.d are honoured after a restart..."
+  cat > /var/snap/villagesql/common/etc/conf.d/90-spread.cnf <<'CNF'
+  [mysqld]
+  max_connections = 99
+  CNF
+  snap restart villagesql
+  timeout 90 /bin/bash -c \
+    "until villagesql.mysql -uroot -N -e 'SELECT @@max_connections;' 2>/dev/null | grep -qx 99; do sleep 1; done"
+
+  echo "Clients pick up the port from [client] when connecting over TCP..."
+  villagesql.mysql -uroot -e "CREATE USER 'cfg'@'%' IDENTIFIED BY 'cfgpass';"
+  villagesql.mysql -ucfg -pcfgpass -h127.0.0.1 -N -e "SELECT @@port;" | grep -x 3307
+
+  echo "Config test completed."

@@ -57,7 +57,7 @@ A third part, `snap-license`, stages `LICENSE` as `licenses/LICENSE-snap`.
 | `$SNAP_COMMON/etc/my.cnf` | Main config, generated once by the install hook; ends with `!includedir $SNAP_COMMON/etc/conf.d`. |
 | `$SNAP_COMMON/etc/conf.d/00-snap.cnf` | Written by the configure hook from `snap set` options. Not user editable. |
 | `$SNAP_COMMON/etc/conf.d/*.cnf` | Free-form administrator config. |
-| `$SNAP_COMMON/etc/conf.d/10-extensions.cnf` | Written by the extensions command-chain script: `veb_dir`. |
+| (`mysqld` command line) | `veb_dir=$SNAP_COMMON/veb` is passed by `mysqld.sh`, so `conf.d` stays fully owned by root and the administrator. |
 | `$SNAP_COMMON/log/error.log` | Server error log. |
 | `$SNAP_COMMON/veb/` | Effective `veb_dir`, regenerated on every daemon start (see Extensions). |
 | `$SNAP_COMMON/.snap-data-major` | The MySQL major (`8.4`) that last ran on `data/`; read by the post-refresh hook. |
@@ -131,16 +131,17 @@ assembles that directory at every daemon start. `snap/local/extensions-env.sh`
 is the first link of the daemon's `command-chain` and, as `_daemon_`:
 
 1. Empties `$SNAP_COMMON/veb/`.
-2. Symlinks every `$SNAP/lib/veb/*.veb` (built-in bundles) into it.
+2. Copies every `$SNAP/usr/lib/veb/*.veb` (built-in bundles) into it.
 3. For each `$SNAP/extensions/<dir>/` in sorted order (connected providers),
-   symlinks every `veb/*.veb` whose target name is not present yet; a clash is
+   copies every `veb/*.veb` whose file name is not present yet; a clash is
    recorded and skipped, so built-ins win over providers and earlier
    providers win over later ones.
 4. Writes `$SNAP_COMMON/veb/INVENTORY` with one line per bundle:
    `<file>\t<origin>\t<version>`, where origin is `built-in` or
    `snap:<dir>` and version comes from the provider's `manifest`
    (`VERSION=` line) or the bundle's own `manifest.json`.
-5. Writes `conf.d/10-extensions.cnf` with `veb_dir=$SNAP_COMMON/veb`.
+
+`mysqld.sh` passes `--veb-dir=$SNAP_COMMON/veb` on the command line.
 
 Failures never block the daemon: on error the script logs a warning and
 `exec`s the daemon anyway.

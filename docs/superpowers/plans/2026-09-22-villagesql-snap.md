@@ -53,13 +53,13 @@
 **Interfaces:**
 - Produces: apps `villagesql.villagesql` (daemon), `villagesql.mysql`, `villagesql.mysqladmin`, `villagesql.mysqldump`, `villagesql.mysqlbinlog`, `villagesql.mysqlcheck`, `villagesql.config`; files `$SNAP/bin/mysqld.sh`, `$SNAP/bin/client.sh`, `$SNAP/default-config/{my.cnf,init.sql}`; `$SNAP_COMMON/.snap-data-major` containing `8.4`.
 
-- [ ] **Step 1: Copy the license**
+- [x] **Step 1: Copy the license**
 
 ```bash
 cp ../../postgresql-snap/LICENSE LICENSE
 ```
 
-- [ ] **Step 2: Write `snap/snapcraft.yaml`**
+- [x] **Step 2: Write `snap/snapcraft.yaml`**
 
 ```yaml
 name: villagesql
@@ -203,7 +203,7 @@ parts:
 
 Notes for the implementer: the `include`, `include-dev` and `lib/cmake` directories are the extension SDK; `villagesql.config` is kept (it prints SDK flags) but the headers are excluded to keep the snap small. If `-DCOMPILATION_COMMENT_SERVER` is rejected by cmake as unused it is harmless. If a `stage-packages` name does not exist on the 26.04 build base, replace it with the name `apt-cache search <lib>` reports there (for example `libtirpc3` instead of `libtirpc3t64`).
 
-- [ ] **Step 3: Write `snap/local/mysqld.sh`**
+- [x] **Step 3: Write `snap/local/mysqld.sh`**
 
 ```bash
 #!/bin/bash
@@ -231,7 +231,7 @@ exec "$SNAP/usr/bin/setpriv" --clear-groups --reuid _daemon_ --regid root -- \
     --log-error="$SNAP_COMMON/log/error.log"
 ```
 
-- [ ] **Step 4: Write `snap/local/client.sh`**
+- [x] **Step 4: Write `snap/local/client.sh`**
 
 ```bash
 #!/bin/bash
@@ -243,7 +243,7 @@ shift
 exec "$SNAP/usr/bin/$tool" --defaults-file="$SNAP_COMMON/etc/my.cnf" "$@"
 ```
 
-- [ ] **Step 5: Write `snap/local/default-config/my.cnf`**
+- [x] **Step 5: Write `snap/local/default-config/my.cnf`**
 
 ```ini
 # VillageSQL snap: main configuration file.
@@ -265,7 +265,7 @@ mysqlx = OFF
 !includedir @SNAP_COMMON@/etc/conf.d
 ```
 
-- [ ] **Step 6: Write `snap/local/default-config/init.sql`**
+- [x] **Step 6: Write `snap/local/default-config/init.sql`**
 
 ```sql
 -- Run once by the install hook on a freshly initialised data directory.
@@ -276,7 +276,7 @@ INSTALL PLUGIN auth_socket SONAME 'auth_socket.so';
 ALTER USER 'root'@'localhost' IDENTIFIED WITH auth_socket;
 ```
 
-- [ ] **Step 7: Write `snap/hooks/install`**
+- [x] **Step 7: Write `snap/hooks/install`**
 
 ```bash
 #!/bin/bash
@@ -330,7 +330,7 @@ fi
 echo "$SNAP_VERSION" | cut -d. -f1-2 > "$SNAP_COMMON/.snap-data-major"
 ```
 
-- [ ] **Step 8: Make scripts executable and build**
+- [x] **Step 8: Make scripts executable and build**
 
 ```bash
 chmod +x snap/local/*.sh snap/hooks/install
@@ -339,7 +339,7 @@ snapcraft pack 2>&1 | tee /tmp/claude-1000/-home-ubuntu-canonical-taurus-forever
 
 Expected: `Packed villagesql_8.4.11-0.0.6_amd64.snap`. The build takes about an hour; run it in the background and fix any cmake or stage-package error it reports. Common fixes: missing `-dev` package (add to `build-packages`), unused cmake variable warnings (ignore), a lint warning about an unused staged library (add a `prime` exclusion).
 
-- [ ] **Step 9: Install and verify manually**
+- [x] **Step 9: Install and verify manually**
 
 ```bash
 sudo snap install ./villagesql_8.4.11-0.0.6_amd64.snap --dangerous --jailmode
@@ -353,7 +353,7 @@ sudo journalctl -k | grep 'apparmor="DENIED"' | grep snap.villagesql || echo "no
 
 Record the exact `VERSION()` string (expected `8.4.11-villagesql-0.0.6` or similar); the smoke test in Task 2 greps for it. If the install hook fails, read `sudo journalctl -u snapd` and `/var/snap/villagesql/common/log/error.log`.
 
-- [ ] **Step 10: Commit**
+- [x] **Step 10: Commit**
 
 ```bash
 git add LICENSE snap/
@@ -370,7 +370,7 @@ Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
 **Interfaces:**
 - Consumes: apps from Task 1; `$CRAFT_ARTIFACT` (the packed snap) and `$PROJECT_PATH` provided by `snapcraft test`.
 
-- [ ] **Step 1: Write `spread.yaml`**
+- [x] **Step 1: Write `spread.yaml`**
 
 ```yaml
 project: villagesql-snap
@@ -405,7 +405,7 @@ exclude:
 kill-timeout: 1h
 ```
 
-- [ ] **Step 2: Write `spread/tests/smoke/task.yaml`**
+- [x] **Step 2: Write `spread/tests/smoke/task.yaml`**
 
 ```yaml
 summary: VillageSQL snap smoke tests
@@ -442,7 +442,7 @@ execute: |
 
 Adjust the `VERSION()` grep to the string recorded in Task 1 step 9 if it differs.
 
-- [ ] **Step 3: Write `spread/tests/auth/task.yaml`**
+- [x] **Step 3: Write `spread/tests/auth/task.yaml`**
 
 ```yaml
 summary: root uses auth_socket; TCP needs a real account
@@ -471,7 +471,7 @@ execute: |
   ! ss -ltn | grep -E "0.0.0.0:3306\s"
 ```
 
-- [ ] **Step 4: Write the CLI tests**
+- [x] **Step 4: Write the CLI tests**
 
 `spread/tests/cli_mysql/task.yaml`:
 
@@ -567,7 +567,7 @@ execute: |
 
 If `villagesql_config --prefix` or `--cflags` is not a supported option (check `villagesql.config --help`), replace those lines with the options it does support.
 
-- [ ] **Step 5: Run the tests on one system**
+- [x] **Step 5: Run the tests on one system**
 
 ```bash
 snapcraft test -- craft:ubuntu-24.04:spread/tests/smoke craft:ubuntu-24.04:spread/tests/auth
@@ -576,7 +576,7 @@ snapcraft test -- 'craft:ubuntu-24.04:spread/tests/cli_*'
 
 Expected: every task prints `Successful tasks: N`. On a failure, `snapcraft test --debug -- craft:ubuntu-24.04:spread/tests/<name>` opens a shell in the test VM.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add spread.yaml spread/
@@ -590,7 +590,7 @@ Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
 **Files:**
 - Create: `README.md`, `SECURITY.md`, `docs/commands.md`, `tox.ini`, `pyproject.toml`, `poetry.lock`, `tests/test_smoke.py`, `.github/workflows/ci.yaml`, `.github/workflows/release.yaml`, `.github/CODEOWNERS`, `.github/zizmor.yaml`, `.github/actionlint.yaml`, `.github/renovate.json5`, `.github/ISSUE_TEMPLATE/bug_report.md`
 
-- [ ] **Step 1: Copy repo metadata from postgresql-snap and adapt**
+- [x] **Step 1: Copy repo metadata from postgresql-snap and adapt**
 
 ```bash
 PG=../../postgresql-snap
@@ -616,7 +616,7 @@ Then edit `.github/workflows/ci.yaml`: set the test job `timeout-minutes` to `60
 
 In `tox.ini` change the yamllint line to `poetry run yamllint --no-warnings ./snap/ ./extensions/*/snap/`.
 
-- [ ] **Step 2: Write `tests/test_smoke.py`**
+- [x] **Step 2: Write `tests/test_smoke.py`**
 
 ```python
 # Copyright 2026 Canonical Ltd.
@@ -662,7 +662,7 @@ def test_version():
     assert out.startswith(f"{mysql_version}-villagesql-{vsql_version}")
 ```
 
-- [ ] **Step 3: Write `README.md`**
+- [x] **Step 3: Write `README.md`**
 
 ```markdown
 # VillageSQL snap
@@ -736,7 +736,7 @@ respective owners. This snap is not sponsored, endorsed, or affiliated with
 either.
 ```
 
-- [ ] **Step 4: Write `docs/commands.md`**
+- [x] **Step 4: Write `docs/commands.md`**
 
 ```markdown
 # Commands
@@ -793,7 +793,7 @@ mysqld is alive
 | `/tmp/mysql.sock` (inside the snap) | Unix socket; clients use it by default |
 ```
 
-- [ ] **Step 5: Lint and run the host smoke test**
+- [x] **Step 5: Lint and run the host smoke test**
 
 ```bash
 tox run -e lint
@@ -802,7 +802,7 @@ tox run -e smoke      # requires the snap from Task 1 to be installed
 
 Expected: both pass. `poetry check --lock` may complain if `poetry.lock` does not match: run `poetry lock` once.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add README.md SECURITY.md docs/commands.md tox.ini pyproject.toml poetry.lock tests/ .github/
