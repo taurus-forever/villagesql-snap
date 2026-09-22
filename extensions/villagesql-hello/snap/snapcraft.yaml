@@ -1,0 +1,61 @@
+name: villagesql-hello
+base: core26
+version: '1.0.0'
+summary: Example extension for the VillageSQL snap (content interface)
+description: |
+  Example of shipping a VillageSQL extension as a separate snap that plugs
+  into the villagesql snap through the content interface:
+
+    sudo snap install villagesql-hello
+    sudo snap connect villagesql:extensions villagesql-hello:extensions
+    sudo snap restart villagesql
+    sudo villagesql.mysql -uroot \
+      -e "INSTALL EXTENSION vsql_hello; SELECT hello('snap');"
+
+  Provides hello(str) and shout(str), written in C++ with the VillageSQL v3
+  SDK and built against the published SDK tarball (no server build needed).
+grade: devel
+confinement: strict
+
+platforms:
+  amd64:
+  arm64:
+
+# Consumed by the villagesql snap's `extensions` plug. The content label
+# carries the MySQL major: a provider built for another major can never be
+# connected.
+slots:
+  extensions:
+    interface: content
+    content: villagesql-8.4-extensions
+    source:
+      read:
+        - $SNAP/hello
+
+parts:
+  hello:
+    plugin: nil
+    source: .
+    source-type: local
+    build-packages:
+      - build-essential
+      - ca-certificates
+      - cmake
+      - curl
+    override-build: |
+      set -e
+      SDK_VERSION=0.0.6
+      SDK_URL="https://github.com/villagesql/villagesql-server/releases"
+      SDK_URL="$SDK_URL/download/release%2F${SDK_VERSION}"
+      SDK_URL="$SDK_URL/villagesql-extension-sdk-${SDK_VERSION}.tar.gz"
+      rm -rf sdk build && mkdir -p sdk
+      curl -fsSL "$SDK_URL" | tar xz -C sdk --strip-components=1
+      cmake -S . -B build -DCMAKE_BUILD_TYPE=Release \
+        -DCMAKE_PREFIX_PATH="$PWD/sdk"
+      cmake --build build
+      tar -tf build/vsql_hello.veb
+      # Layout consumed by the villagesql snap, see docs/extensions.md
+      OUT="$CRAFT_PART_INSTALL/hello"
+      install -Dm644 build/vsql_hello.veb "$OUT/veb/vsql_hello.veb"
+      printf 'VERSION=%s\n' "$CRAFT_PROJECT_VERSION" > "$OUT/manifest"
+      install -Dm644 LICENSE "$OUT/licenses/LICENSE-villagesql-hello"

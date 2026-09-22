@@ -1,0 +1,7 @@
+{
+  "name": "vsql_hello",
+  "version": "1.0.0",
+  "description": "Example VillageSQL extension shipped as a snap: hello() and shout()",
+  "author": "Canonical",
+  "license": "Apache-2.0"
+}

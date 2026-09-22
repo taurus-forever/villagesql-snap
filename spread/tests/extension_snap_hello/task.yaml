@@ -1,0 +1,57 @@
+summary: An extension shipped as a snap through the content interface
+
+execute: |
+  EXT="$(ls "${PROJECT_PATH}"/extensions/villagesql-hello/villagesql-hello_*.snap 2>/dev/null | head -1)"
+  if [ -z "$EXT" ]; then
+    echo "ERROR: need extensions/villagesql-hello/*.snap (snapcraft pack there)" >&2
+    exit 1
+  fi
+  INV=/var/snap/villagesql/common/veb/INVENTORY
+  MYSQL="villagesql.mysql -uroot -N"
+  restart() {
+    snap restart villagesql
+    timeout 90 /bin/bash -c \
+      "while ! villagesql.mysqladmin -uroot ping >/dev/null 2>&1; do echo Waiting for villagesql...; sleep 1; done"
+  }
+
+  echo "Installing and connecting the extension snap (no auto-connect for --dangerous)..."
+  snap install "$EXT" --dangerous
+  snap connect villagesql:extensions villagesql-hello:extensions
+  snap connections villagesql | grep -E "villagesql:extensions\s+villagesql-hello:extensions"
+  # content mounts exist only inside the snap's mount namespace
+  snap run --shell villagesql.mysql -c 'test -f "$SNAP/extensions/hello/veb/vsql_hello.veb"'
+  restart
+  cat "$INV"
+  grep -P "^vsql_hello\.veb\tsnap:hello\t1\.0\.0$" "$INV"
+  villagesql.extensions list | grep -E "^vsql_hello\s+1\.0\.0\s+snap:hello\s+no$"
+
+  echo "Installing and using the extension..."
+  $MYSQL -e "INSTALL EXTENSION vsql_hello;"
+  $MYSQL -e "SELECT hello('snap');" | grep -x "Hello, snap!"
+  $MYSQL -e "SELECT shout('snap');" | grep -x "SNAP!"
+  $MYSQL -e "SELECT hello(NULL) IS NULL;" | grep -x 1
+  villagesql.extensions list | grep -E "^vsql_hello\s+1\.0\.0\s+snap:hello\s+yes$"
+
+  echo "It is still there after a restart..."
+  restart
+  $MYSQL -e "SELECT hello('again');" | grep -x "Hello, again!"
+
+  echo "Disconnecting the extension snap: the bundle is gone after restart..."
+  $MYSQL -e "UNINSTALL EXTENSION vsql_hello;"
+  snap disconnect villagesql:extensions villagesql-hello:extensions
+  snap run --shell villagesql.mysql -c 'test ! -e "$SNAP/extensions/hello"'
+  restart
+  ! grep -q vsql_hello "$INV"
+  ! test -e /var/snap/villagesql/common/veb/vsql_hello.veb
+  ! $MYSQL -e "INSTALL EXTENSION vsql_hello;" 2>/dev/null
+
+  echo "Ensure no AppArmor denials from the daemon..."
+  if journalctl -k | grep 'apparmor="DENIED"' | grep 'profile="snap.villagesql.villagesql"'; then
+    echo "ERROR: AppArmor denials produced by the daemon (see above)" >&2
+    exit 1
+  fi
+
+  echo "Extension snap test completed."
+
+restore: |
+  snap remove villagesql-hello 2>/dev/null || true
