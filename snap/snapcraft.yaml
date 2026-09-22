@@ -24,6 +24,15 @@ confinement: strict
 system-usernames:
   _daemon_: shared
 
+plugs:
+  # Extensions shipped as separate snaps (see docs/extensions.md). Each
+  # connected provider appears under $SNAP/extensions/<dir>/ with
+  # veb/<name>.veb and an optional manifest (VERSION=x.y.z).
+  extensions:
+    interface: content
+    content: villagesql-8.4-extensions
+    target: $SNAP/extensions
+
 hooks:
   install:
     plugs:
@@ -34,6 +43,8 @@ hooks:
 apps:
   villagesql:
     command: bin/mysqld.sh
+    command-chain:
+      - bin/extensions-env.sh
     daemon: simple
     plugs:
       - network
@@ -67,6 +78,10 @@ apps:
       - network
   config:
     command: usr/bin/villagesql_config
+  extensions:
+    command: bin/extensions.sh
+    plugs:
+      - network
 
 parts:
   villagesql:
@@ -144,6 +159,11 @@ parts:
   wrapper:
     plugin: dump
     source: snap/local
+    override-build: |
+      craftctl default
+      install -d "$CRAFT_PART_INSTALL/extensions"  # content plug mount point
     organize:
       mysqld.sh: bin/mysqld.sh
       client.sh: bin/client.sh
+      extensions-env.sh: bin/extensions-env.sh
+      extensions.sh: bin/extensions.sh

@@ -1,0 +1,35 @@
+summary: Built-in extension bundles are visible, installable and listed
+
+execute: |
+  echo "veb_dir points at the assembled directory..."
+  villagesql.mysql -uroot -N -e "SELECT @@veb_dir;" | grep -x "/var/snap/villagesql/common/veb/"
+  ls -la /var/snap/villagesql/common/veb/
+  cat /var/snap/villagesql/common/veb/INVENTORY
+  test -f /var/snap/villagesql/common/veb/vsql_simple.veb
+  grep -P "^vsql_simple\.veb\tbuilt-in\t0\.0\.1$" /var/snap/villagesql/common/veb/INVENTORY
+
+  echo "Nothing installed yet..."
+  villagesql.extensions list | grep -E "^vsql_simple\s+0\.0\.1\s+built-in\s+no$"
+
+  echo "INSTALL EXTENSION works and the function is callable..."
+  villagesql.mysql -uroot -e "INSTALL EXTENSION vsql_simple;"
+  villagesql.mysql -uroot -N -e "SELECT EXTENSION_NAME FROM INFORMATION_SCHEMA.EXTENSIONS;" | grep -x vsql_simple
+  villagesql.mysql -uroot -N -e "SELECT rot13('hello');" | grep -E '^uryyb\s*$'  # the example pads its result
+  villagesql.extensions list | grep -E "^vsql_simple\s+0\.0\.1\s+built-in\s+yes$"
+
+  echo "The installation survives a restart..."
+  snap restart villagesql
+  timeout 90 /bin/bash -c \
+    "while ! villagesql.mysqladmin -uroot ping >/dev/null 2>&1; do sleep 1; done"
+  villagesql.mysql -uroot -N -e "SELECT rot13('hello');" | grep -E '^uryyb\s*$'  # the example pads its result
+
+  echo "UNINSTALL EXTENSION removes it..."
+  villagesql.mysql -uroot -e "UNINSTALL EXTENSION vsql_simple;"
+  ! villagesql.mysql -uroot -N -e "SELECT rot13('hello');" 2>/dev/null
+  villagesql.extensions list | grep -E "^vsql_simple\s+0\.0\.1\s+built-in\s+no$"
+
+  echo "Ensure no AppArmor denials from the daemon..."
+  if journalctl -k | grep 'apparmor="DENIED"' | grep 'profile="snap.villagesql.villagesql"'; then
+    echo "ERROR: AppArmor denials produced by the daemon (see above)" >&2
+    exit 1
+  fi

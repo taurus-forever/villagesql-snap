@@ -5,3 +5,5 @@ __pycache__/
 extensions/*/parts/
 extensions/*/stage/
 extensions/*/prime/
+.craft-spread-*/
+.spread-reuse.*.yaml

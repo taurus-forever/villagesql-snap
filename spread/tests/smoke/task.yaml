@@ -28,3 +28,4 @@ execute: |
   villagesql.mysqlbinlog --help >/dev/null
   villagesql.mysqlcheck --help >/dev/null
   villagesql.config --help >/dev/null
+  villagesql.extensions --help >/dev/null

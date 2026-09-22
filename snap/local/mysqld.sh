@@ -24,4 +24,5 @@ exec "$SNAP/usr/bin/setpriv" --clear-groups --reuid _daemon_ --regid root -- \
     --datadir="$SNAP_COMMON/data" \
     --socket=/tmp/mysql.sock \
     --pid-file="$SNAP_COMMON/data/mysqld.pid" \
-    --log-error="$SNAP_COMMON/log/error.log"
+    --log-error="$SNAP_COMMON/log/error.log" \
+    --veb-dir="$SNAP_COMMON/veb"
