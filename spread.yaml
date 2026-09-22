@@ -1,0 +1,30 @@
+project: villagesql-snap
+
+backends:
+  craft:
+    type: craft
+    systems:
+      - ubuntu-26.04
+      - ubuntu-24.04
+      - ubuntu-22.04
+
+suites:
+  spread/tests/:
+    summary: General integration tests
+    prepare-each: |
+      snap install "$CRAFT_ARTIFACT" --dangerous --jailmode
+      timeout 90 /bin/bash -c \
+        "while ! villagesql.mysqladmin -uroot ping >/dev/null 2>&1; do echo Waiting for villagesql...; sleep 1; done"
+    restore-each: |
+      snap remove villagesql --purge --terminate
+
+exclude:
+  - .git
+  - parts
+  - stage
+  - prime
+  - extensions/*/parts
+  - extensions/*/stage
+  - extensions/*/prime
+
+kill-timeout: 1h

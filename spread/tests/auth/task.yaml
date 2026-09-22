@@ -1,0 +1,24 @@
+summary: root uses auth_socket; TCP needs a real account
+
+execute: |
+  echo "root over the socket needs no password..."
+  villagesql.mysql -uroot -N -e "SELECT CURRENT_USER();" | grep -x "root@localhost"
+  villagesql.mysql -uroot -N -e "SELECT plugin FROM mysql.user WHERE user='root' AND host='localhost';" | grep -x auth_socket
+
+  echo "root over TCP is refused (auth_socket has no peer credentials)..."
+  if villagesql.mysql -uroot -h127.0.0.1 -e "SELECT 1;" 2>/dev/null; then
+    echo "ERROR: root logged in over TCP" >&2
+    exit 1
+  fi
+
+  echo "A created account works over TCP on 127.0.0.1..."
+  villagesql.mysql -uroot -e "
+    CREATE USER 'spread'@'127.0.0.1' IDENTIFIED BY 'spreadpass';
+    GRANT ALL PRIVILEGES ON *.* TO 'spread'@'127.0.0.1';
+  "
+  villagesql.mysql -uspread -pspreadpass -h127.0.0.1 -N -e "SELECT CURRENT_USER();" | grep -x "spread@127.0.0.1"
+
+  echo "Server is bound to localhost only by default..."
+  villagesql.mysql -uroot -N -e "SELECT @@bind_address;" | grep -x "127.0.0.1"
+  ss -ltn | grep -E "127.0.0.1:3306\s"
+  ! ss -ltn | grep -E "0.0.0.0:3306\s"

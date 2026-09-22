@@ -1,0 +1,12 @@
+summary: villagesql.mysqladmin CLI tests
+
+execute: |
+  echo "Testing mysqladmin..."
+  villagesql.mysqladmin -uroot ping | grep -x "mysqld is alive"
+  villagesql.mysqladmin -uroot status | grep -E "^Uptime: "
+  villagesql.mysqladmin -uroot version | grep -E "^Server version"
+  villagesql.mysqladmin -uroot variables | grep -E "\|\s+port\s+\|\s+3306\s+\|"
+  villagesql.mysqladmin -uroot create spreadadmin
+  villagesql.mysql -uroot -N -e "SHOW DATABASES;" | grep -x spreadadmin
+  villagesql.mysqladmin -uroot --force drop spreadadmin
+  ! villagesql.mysql -uroot -N -e "SHOW DATABASES;" | grep -x spreadadmin

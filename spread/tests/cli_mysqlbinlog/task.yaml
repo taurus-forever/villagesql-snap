@@ -1,0 +1,10 @@
+summary: villagesql.mysqlbinlog CLI tests
+
+execute: |
+  echo "Binary logging is on by default in MySQL 8.4..."
+  villagesql.mysql -uroot -N -e "SELECT @@log_bin;" | grep -x 1
+  villagesql.mysql -uroot -e "CREATE DATABASE binlogtest; CREATE TABLE binlogtest.t (id INT); INSERT INTO binlogtest.t VALUES (42);"
+  villagesql.mysql -uroot -e "FLUSH BINARY LOGS;"
+  FIRST=$(villagesql.mysql -uroot -N -e "SHOW BINARY LOGS;" | head -1 | awk '{print $1}')
+  echo "Reading $FIRST with mysqlbinlog..."
+  villagesql.mysqlbinlog --verbose "/var/snap/villagesql/common/data/$FIRST" | grep -i "binlogtest"

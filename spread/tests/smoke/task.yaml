@@ -1,0 +1,30 @@
+summary: VillageSQL snap smoke tests
+
+execute: |
+  echo "Running smoke test..."
+  SNAP_VERSION=$(awk -F"'" '/^version/{print $2}' "${PROJECT_PATH}/snap/snapcraft.yaml")
+  MYSQL_VERSION="${SNAP_VERSION%%-*}"
+  VSQL_VERSION="${SNAP_VERSION#*-}"
+  villagesql.mysql -uroot -N -e "SELECT VERSION();" | \
+    grep -E "^${MYSQL_VERSION}-villagesql-${VSQL_VERSION}"
+  snap services villagesql | grep -E "villagesql.villagesql\s+enabled\s+active"
+
+  echo "Ensure the server runs as _daemon_ with the snap's paths..."
+  villagesql.mysql -uroot -N -e "SELECT @@datadir;" | grep -x "/var/snap/villagesql/common/data/"
+  villagesql.mysql -uroot -N -e "SELECT @@socket;" | grep -x "/tmp/mysql.sock"
+  test "$(stat -c %u /var/snap/villagesql/common/data)" = "584792"
+  grep -x "8.4" /var/snap/villagesql/common/.snap-data-major
+
+  echo "Ensure no AppArmor denials from the daemon..."
+  if journalctl -k | grep 'apparmor="DENIED"' | grep 'profile="snap.villagesql.villagesql"'; then
+    echo "ERROR: AppArmor denials produced by the daemon (see above)" >&2
+    exit 1
+  fi
+
+  echo "Ensure all tools have been shipped..."
+  villagesql.mysql --help >/dev/null
+  villagesql.mysqladmin --version >/dev/null  # --help exits 1 upstream
+  villagesql.mysqldump --help >/dev/null
+  villagesql.mysqlbinlog --help >/dev/null
+  villagesql.mysqlcheck --help >/dev/null
+  villagesql.config --help >/dev/null

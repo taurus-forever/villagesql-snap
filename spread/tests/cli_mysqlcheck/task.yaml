@@ -1,0 +1,6 @@
+summary: villagesql.mysqlcheck CLI tests
+
+execute: |
+  villagesql.mysql -uroot -e "CREATE DATABASE checkme; CREATE TABLE checkme.t (id INT PRIMARY KEY); INSERT INTO checkme.t VALUES (1);"
+  villagesql.mysqlcheck -uroot checkme | grep -E "^checkme.t\s+OK"
+  villagesql.mysqlcheck -uroot --all-databases --check | grep -E "^mysql.user\s+OK"

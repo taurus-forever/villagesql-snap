@@ -1,0 +1,15 @@
+summary: villagesql.mysqldump CLI tests
+
+execute: |
+  echo "Creating test data..."
+  villagesql.mysql -uroot -e "
+    CREATE DATABASE dumpsrc;
+    CREATE TABLE dumpsrc.t (id INT PRIMARY KEY, v VARCHAR(20));
+    INSERT INTO dumpsrc.t VALUES (1, 'one'), (2, 'two');
+  "
+  echo "Dumping and restoring into another database..."
+  villagesql.mysqldump -uroot dumpsrc > /root/dump.sql
+  grep -q "INSERT INTO \`t\`" /root/dump.sql
+  villagesql.mysql -uroot -e "CREATE DATABASE dumpdst;"
+  villagesql.mysql -uroot dumpdst < /root/dump.sql
+  villagesql.mysql -uroot -N -e "SELECT v FROM dumpdst.t WHERE id=2;" | grep -x two

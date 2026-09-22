@@ -1,0 +1,6 @@
+summary: villagesql.config (extension SDK configuration script) tests
+
+execute: |
+  villagesql.config --version | grep -E "0\.0\.6"
+  villagesql.config --cflags | grep -E "\-I"
+  villagesql.config --prefix | grep -E "^/snap/villagesql/"
