@@ -1,0 +1,7 @@
+*.snap
+*.comp
+.tox/
+__pycache__/
+extensions/*/parts/
+extensions/*/stage/
+extensions/*/prime/
