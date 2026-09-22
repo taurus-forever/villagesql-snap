@@ -2050,7 +2050,7 @@ Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
 - Modify: `README.md` (extensions paragraph and doc links), `docs/superpowers/specs/2026-09-22-villagesql-snap-design.md` (record that `veb_dir` is passed on the command line rather than via `10-extensions.cnf`)
 - Verify: everything
 
-- [ ] **Step 1: Update README.md**
+- [x] **Step 1: Update README.md**
 
 Add after the install section:
 
@@ -2075,11 +2075,11 @@ See [docs/extensions.md](docs/extensions.md) and the example providers in
 
 And under "For more information" list: `docs/commands.md`, `docs/configuration.md`, `docs/refresh.md`, `docs/extensions.md`.
 
-- [ ] **Step 2: Fix the spec detail**
+- [x] **Step 2: Fix the spec detail**
 
 In the spec's runtime layout table replace the `10-extensions.cnf` row with: `veb_dir` is passed on the `mysqld` command line by `mysqld.sh`, so `conf.d` stays fully owned by root and the administrator. Remove step 5 of the "Server side" list accordingly.
 
-- [ ] **Step 3: Lint, then the full spread run on all three systems**
+- [x] **Step 3: Lint, then the full spread run on all three systems**
 
 ```bash
 tox run -e lint
@@ -2089,7 +2089,7 @@ tail -5 /tmp/claude-1000/-home-ubuntu-canonical-taurus-forever-villagesql-snap/8
 
 Expected: `Successful tasks: 45` (15 tests x 3 systems) and no failed tasks. Fix and re-run any failing task on its system with `snapcraft test -- craft:<system>:spread/tests/<name>`.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add README.md docs/
