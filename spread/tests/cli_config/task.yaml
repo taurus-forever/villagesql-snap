@@ -1,6 +1,9 @@
 summary: villagesql.config (extension SDK configuration script) tests
 
 execute: |
-  villagesql.config --version | grep -E "0\.0\.6"
+  # Since 0.0.7 the SDK version carries no codebase name: 0.0.7, not mysql-8.4_0.0.7
+  SNAP_VERSION=$(awk -F"'" '/^version/{print $2}' "${PROJECT_PATH}/snap/snapcraft.yaml")
+  VSQL_VERSION="${SNAP_VERSION#*-}"; VSQL_VERSION="${VSQL_VERSION%%+*}"
+  villagesql.config --version | grep -x "${VSQL_VERSION}"
   villagesql.config --cflags | grep -E "\-I"
   villagesql.config --prefix | grep -E "^/snap/villagesql/"
