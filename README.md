@@ -6,7 +6,8 @@ extensible drop-in replacement for MySQL, built from the upstream sources.
 
 For more information about using the snap see the [`docs/`](/docs/) folder:
 [commands](docs/commands.md), [configuration](docs/configuration.md),
-[refresh](docs/refresh.md) and [extensions](docs/extensions.md).
+[refresh](docs/refresh.md), [extensions](docs/extensions.md) and, for
+maintainers, [release](docs/release.md).
 
 ## Tracks
 
