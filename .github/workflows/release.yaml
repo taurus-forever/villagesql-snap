@@ -2,12 +2,11 @@
 # See LICENSE file for licensing details.
 name: Release to Snap Store
 
+# Publishing is manual for now: the maintainer builds, tests locally and
+# uploads to the track by hand. Dispatch this workflow from a <track>/edge
+# branch (8.4/edge, 9.7/edge, percona-8.4/edge) to publish the branch's
+# build to <track>/edge instead.
 on:
-  push:
-    branches:
-      - "*/edge"
-    paths:
-      - snap/**
   workflow_dispatch:
 
 jobs:
@@ -18,13 +17,35 @@ jobs:
       contents: read
     cache-mode: none
 
+  track:
+    name: Track from branch
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      track: ${{ steps.track.outputs.track }}
+    steps:
+      - name: Derive the Snap Store track from the branch name (<track>/edge)
+        id: track
+        env:
+          BRANCH: ${{ github.ref_name }}
+        run: |
+          track="${BRANCH%/edge}"
+          if [ "$track" = "$BRANCH" ]; then
+            echo "Branch '$BRANCH' is not named <track>/edge; refusing to release" >&2
+            exit 1
+          fi
+          echo "track=$track" >> "$GITHUB_OUTPUT"
+    permissions: {}
+    cache-mode: none
+
   release:
     name: Release snap
     needs:
       - ci-tests
+      - track
     uses: canonical/data-platform-workflows/.github/workflows/release_snap_edge.yaml@v53.0.0
     with:
-      track: '8.4'
+      track: ${{ needs.track.outputs.track }}
       artifact-prefix: ${{ needs.ci-tests.outputs.artifact-prefix }}
     secrets:
       snap-store-token: ${{ secrets.SNAP_STORE_TOKEN_EDGE }}

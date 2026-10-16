@@ -2,16 +2,32 @@
 
 This repository contains the packaging metadata for creating a
 [snap](https://snapcraft.io/) of [VillageSQL](https://villagesql.com), the
-extensible drop-in replacement for MySQL 8.4, built from the upstream sources.
+extensible drop-in replacement for MySQL, built from the upstream sources.
 
 For more information about using the snap see the [`docs/`](/docs/) folder:
 [commands](docs/commands.md), [configuration](docs/configuration.md),
 [refresh](docs/refresh.md) and [extensions](docs/extensions.md).
 
+## Tracks
+
+Upstream publishes every VillageSQL release for three *codebases*. The snap
+offers one track per codebase, built from the git branch of the same name:
+
+| Track | Codebase | Base server | Branch |
+| --- | --- | --- | --- |
+| `8.4` (this branch; `latest` is the same build for now) | `mysql-8.4` | MySQL 8.4 | `8.4/edge` |
+| `9.7` | `mysql-9.7` | MySQL 9.7 | `9.7/edge` |
+| `percona-8.4` | `percona-8.4` | Percona Server 8.4 | `percona-8.4/edge` |
+
+A data directory belongs to one codebase and cannot be moved between
+tracks, see [docs/refresh.md](docs/refresh.md).
+
 ## Install the snap
 
 ```shell
-sudo snap install villagesql
+sudo snap install villagesql --channel 8.4/edge          # MySQL 8.4 codebase
+sudo snap install villagesql --channel 9.7/edge          # MySQL 9.7 codebase
+sudo snap install villagesql --channel percona-8.4/edge  # Percona Server 8.4 codebase
 sudo villagesql.mysql -uroot
 ```
 
