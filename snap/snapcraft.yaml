@@ -1,17 +1,20 @@
 name: villagesql
 base: core26
-version: '8.4.11-0.0.7'
-summary: VillageSQL 0.0.7 (MySQL 8.4 codebase) with extensions in a snap.
+version: '8.4.11-0.0.7+percona'
+summary: VillageSQL 0.0.7 (Percona Server 8.4) with extensions in a snap.
 description: |
   VillageSQL Server for MySQL is an open-source, drop-in replacement for
-  MySQL 8.4 that adds an extension framework: custom data types and
-  functions are loaded at run time with INSTALL EXTENSION. This snap builds
+  MySQL 8.4, here built on Percona Server 8.4, that adds an extension
+  framework: custom data types and functions are loaded at run time with
+  INSTALL EXTENSION. This snap builds
   VillageSQL from source and lets extensions be shipped as separate snaps
   connected through the content interface.
 
-  This track builds the mysql-8.4 codebase. Tracks 9.7 (MySQL 9.7) and
-  percona-8.4 (Percona Server 8.4) build the other codebases; a data
-  directory belongs to one codebase and cannot be moved between tracks.
+  This track builds the percona-8.4 codebase: Percona Server 8.4 without
+  MyRocks, the KMIP keyring component and the coredumper library, as in
+  the upstream VillageSQL Percona build. Tracks 8.4 (MySQL 8.4) and 9.7
+  (MySQL 9.7) build the other codebases; a data directory belongs to one
+  codebase and cannot be moved between tracks.
 title: VillageSQL
 contact: https://matrix.to/#/#charmhub-data-platform:ubuntu.com
 license: "Apache-2.0 AND GPL-2.0"
@@ -94,7 +97,7 @@ parts:
   villagesql:
     plugin: cmake
     source: https://github.com/villagesql/villagesql-server.git
-    source-tag: publish/mysql-8.4_0.0.7
+    source-tag: publish/percona-8.4_0.0.7
     source-depth: 1
     cmake-generator: Ninja
     cmake-parameters:
@@ -110,6 +113,12 @@ parts:
       - -DVSQL_PRE_RELEASE_VERSION=
       - -DCOMPILATION_COMMENT=VillageSQL snap
       - -DCOMPILATION_COMMENT_SERVER=VillageSQL snap
+      # Percona: the flags of upstream's own build (bld_tools/build_ci.sh)
+      - -DWITH_CURL=system
+      - -DWITH_ROCKSDB=0
+      - -DWITH_COREDUMPER=OFF
+      - -DWITHOUT_COMPONENT_KEYRING_KMIP=ON
+      - -DWITH_AUTH_OPENID_CONNECT=OFF
     build-packages:
       - bison
       - build-essential
@@ -117,8 +126,13 @@ parts:
       - curl
       - g++
       - libaio-dev
+      - libcurl4-openssl-dev
+      - libkrb5-dev
+      - libldap-dev
       - libncurses-dev
       - libnuma-dev
+      - libsasl2-dev
+      - libsasl2-modules-gssapi-mit
       - libssl-dev
       - libtirpc-dev
       - libz-dev
@@ -127,7 +141,11 @@ parts:
       - zip
     stage-packages:
       - libaio1t64
+      - libcurl4t64
+      - libldap2
       - libnuma1
+      - libsasl2-2
+      - libsasl2-modules-gssapi-mit
       - libssl3t64
       - libtirpc3t64
       - util-linux
@@ -156,6 +174,7 @@ parts:
       # Nothing in the snap links to the shared client library (the tools use
       # the static one) and extensions use the VEF ABI: drop it (lint warning).
       - -usr/lib/libmysqlclient.so*
+      - -usr/lib/libperconaserverclient.so*
       - -usr/bin/mysql_client_test
       - -usr/bin/mysqltest*
       - -usr/bin/mysqlxtest
