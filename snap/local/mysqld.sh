@@ -8,9 +8,13 @@ if [ "${EUID}" != "0" ]; then
   exit 1
 fi
 
-# Record which VillageSQL codebase runs on this data directory; read by post-refresh.
+# Record which VillageSQL codebase initialised this data directory (read by
+# post-refresh): only when no marker exists yet, i.e. the first start or a
+# 0.0.6 install carrying the legacy .snap-data-major marker. Never re-stamp
+# it, or foreign data (a snapshot restored under another track) would be
+# labelled with this codebase and the guard would point the wrong way.
 . "$SNAP/bin/codebase.sh"
-if [ -d "$SNAP_COMMON/data/mysql" ]; then
+if [ -d "$SNAP_COMMON/data/mysql" ] && [ ! -f "$SNAP_COMMON/.snap-data-codebase" ]; then
   write_data_codebase
 fi
 
