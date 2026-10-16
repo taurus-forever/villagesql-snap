@@ -8,7 +8,9 @@ execute: |
     INSERT INTO dumpsrc.t VALUES (1, 'one'), (2, 'two');
   "
   echo "Dumping and restoring into another database..."
-  villagesql.mysqldump -uroot dumpsrc > /root/dump.sql
+  # GTIDs are on by default on MySQL 9.7: a dump restored onto the same
+  # server must not carry GTID_PURGED (see docs/commands.md).
+  villagesql.mysqldump -uroot --set-gtid-purged=OFF dumpsrc > /root/dump.sql
   grep -q "INSERT INTO \`t\`" /root/dump.sql
   villagesql.mysql -uroot -e "CREATE DATABASE dumpdst;"
   villagesql.mysql -uroot dumpdst < /root/dump.sql
