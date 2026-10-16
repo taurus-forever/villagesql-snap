@@ -32,10 +32,12 @@ system-usernames:
 plugs:
   # Extensions shipped as separate snaps (see docs/extensions.md). Each
   # connected provider appears under $SNAP/extensions/<dir>/ with
-  # veb/<name>.veb and an optional manifest (VERSION=x.y.z).
+  # veb/<name>.veb and an optional manifest (VERSION=x.y.z). The SDK and
+  # the VEF ABI are codebase-independent, so one provider serves the 8.4,
+  # 9.7 and percona-8.4 tracks alike and the label names no codebase.
   extensions:
     interface: content
-    content: villagesql-8.4-extensions
+    content: villagesql-extensions
     target: $SNAP/extensions
 
 hooks:

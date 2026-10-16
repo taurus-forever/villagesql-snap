@@ -19,9 +19,9 @@ execute: |
   snap install "$UUID_SNAP" --dangerous
   snap connect villagesql:extensions villagesql-uuid:extensions
   restart
-  grep -P "^vsql_uuid\.veb\tsnap:uuid\t0\.0\.6$" "$INV"
+  grep -P "^vsql_uuid\.veb\tsnap:uuid\t0\.0\.7$" "$INV"
   $MYSQL -e "INSTALL EXTENSION vsql_uuid;"
-  villagesql.extensions list | grep -E "^vsql_uuid\s+0\.0\.6\s+snap:uuid\s+yes$"
+  villagesql.extensions list | grep -E "^vsql_uuid\s+0\.0\.7\s+snap:uuid\s+yes$"
 
   echo "Using the UUID type and functions..."
   $MYSQL -e "SELECT UUID_VERSION(UUID_V4());" | grep -x 4
@@ -54,7 +54,7 @@ execute: |
   snap connect villagesql:extensions villagesql-hello2:extensions
   restart
   cat "$INV"
-  grep -P "^vsql_hello\.veb\tsnap:hello\t1\.0\.0$" "$INV"
+  grep -P "^vsql_hello\.veb\tsnap:hello\t1\.0\.1$" "$INV"
   grep -F "# vsql_hello.veb from snap:hello2 ignored: already provided by snap:hello" "$INV"
   villagesql.extensions list | grep -F "note: vsql_hello.veb from snap:hello2 ignored"
   $MYSQL -e "INSTALL EXTENSION vsql_hello;"
@@ -64,7 +64,7 @@ execute: |
   $MYSQL -e "UNINSTALL EXTENSION vsql_hello;"
   snap remove villagesql-hello
   restart
-  grep -P "^vsql_hello\.veb\tsnap:hello2\t1\.0\.0$" "$INV"
+  grep -P "^vsql_hello\.veb\tsnap:hello2\t1\.0\.1$" "$INV"
   $MYSQL -e "INSTALL EXTENSION vsql_hello;"
   $MYSQL -e "SELECT shout('ok');" | grep -x "OK!"
 

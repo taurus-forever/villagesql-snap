@@ -1,6 +1,6 @@
 name: villagesql-hello
 base: core26
-version: '1.0.0'
+version: '1.0.1'
 summary: Example extension for the VillageSQL snap (content interface)
 description: |
   Example of shipping a VillageSQL extension as a separate snap that plugs
@@ -22,13 +22,13 @@ platforms:
   arm64:
   riscv64:
 
-# Consumed by the villagesql snap's `extensions` plug. The content label
-# carries the MySQL major: a provider built for another major can never be
-# connected.
+# Consumed by the villagesql snap's `extensions` plug on every track: the
+# SDK and the VEF ABI are codebase-independent, so one bundle serves the
+# 8.4, 9.7 and percona-8.4 tracks alike.
 slots:
   extensions:
     interface: content
-    content: villagesql-8.4-extensions
+    content: villagesql-extensions
     source:
       read:
         - $SNAP/hello

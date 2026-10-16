@@ -22,15 +22,15 @@ execute: |
   snap run --shell villagesql.mysql -c 'test -f "$SNAP/extensions/hello/veb/vsql_hello.veb"'
   restart
   cat "$INV"
-  grep -P "^vsql_hello\.veb\tsnap:hello\t1\.0\.0$" "$INV"
-  villagesql.extensions list | grep -E "^vsql_hello\s+1\.0\.0\s+snap:hello\s+no$"
+  grep -P "^vsql_hello\.veb\tsnap:hello\t1\.0\.1$" "$INV"
+  villagesql.extensions list | grep -E "^vsql_hello\s+1\.0\.1\s+snap:hello\s+no$"
 
   echo "Installing and using the extension..."
   $MYSQL -e "INSTALL EXTENSION vsql_hello;"
   $MYSQL -e "SELECT hello('snap');" | grep -x "Hello, snap!"
   $MYSQL -e "SELECT shout('snap');" | grep -x "SNAP!"
   $MYSQL -e "SELECT hello(NULL) IS NULL;" | grep -x 1
-  villagesql.extensions list | grep -E "^vsql_hello\s+1\.0\.0\s+snap:hello\s+yes$"
+  villagesql.extensions list | grep -E "^vsql_hello\s+1\.0\.1\s+snap:hello\s+yes$"
 
   echo "It is still there after a restart..."
   restart

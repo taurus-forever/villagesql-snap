@@ -21,10 +21,17 @@ Connecting a provider only makes its bundle visible to the server; like
 and functions are then called inside a query: `SELECT hello('snap');`.
 Before disconnecting or removing a provider, run `UNINSTALL EXTENSION <name>;`.
 
-* `villagesql-hello`: a from-scratch C++ extension (`hello()`, `shout()`).
-* `villagesql-uuid`: packages the upstream
+* `villagesql-hello` (1.0.1): a from-scratch C++ extension (`hello()`,
+  `shout()`), built with SDK 0.0.6 on purpose: bundles built against an
+  older SDK keep loading on newer servers.
+* `villagesql-uuid` (0.0.7): packages the upstream
   [vsql-uuid](https://github.com/villagesql/vsql-uuid) extension (a `UUID`
-  type and generators such as `UUID_V7()`).
+  type and generators such as `UUID_V7()`), built with SDK 0.0.7.
+
+The SDK and the VEF ABI are codebase-independent, so one provider build
+serves the `8.4`, `9.7` and `percona-8.4` tracks of the `villagesql` snap
+alike; providers are published on `latest` only. Store-installed providers
+auto-connect (same publisher); side-loaded ones need `snap connect`.
 
 The spread tests `spread/tests/extension_snap_*` expect the packed snaps next
 to their `snap/` directories.

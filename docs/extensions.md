@@ -52,16 +52,27 @@ The result is recorded in `veb/INVENTORY` and shown by
 `INSTALLED` needs root (it queries `INFORMATION_SCHEMA.EXTENSIONS` over the
 socket).
 
+## One bundle, every track
+
+The extension SDK and the VEF ABI are codebase-independent: upstream ships
+one SDK tarball per VillageSQL release for all codebases, and a bundle talks
+to the server through a protocol-versioned ABI, so a `.veb` built once
+loads on the `8.4`, `9.7` and `percona-8.4` tracks alike. Provider snaps
+therefore need no per-track builds and connect to any track through the
+same content label, `villagesql-extensions`. Bundles built against an older
+SDK keep loading on newer servers (protocol negotiation); the
+`villagesql-hello` example is built with SDK 0.0.6 on purpose.
+
 ## Writing a provider snap
 
-A provider is a normal strict snap with a content slot whose label carries
-the MySQL major, so a bundle built for another major can never be connected:
+A provider is a normal strict snap with a content slot labelled
+`villagesql-extensions`:
 
 ```yaml
 slots:
   extensions:
     interface: content
-    content: villagesql-8.4-extensions
+    content: villagesql-extensions
     source:
       read:
         - $SNAP/<dir>
@@ -70,7 +81,7 @@ slots:
 `$SNAP/<dir>/` must contain `veb/<name>.veb` (or `veb/<name>-<version>.veb`)
 and may contain `manifest` with a `VERSION=` line. Build the bundle against
 the published SDK tarball of the same VillageSQL version
-(`villagesql-extension-sdk-0.0.6.tar.gz` from the upstream GitHub release):
+(`villagesql-extension-sdk-0.0.7.tar.gz` from the upstream GitHub release):
 no server build is needed, a provider builds in seconds. See
 `extensions/villagesql-hello` for a from-scratch C++ extension and
 `extensions/villagesql-uuid` for packaging an upstream extension repository.
@@ -80,7 +91,7 @@ package), so an extension can be compiled on a machine that only has the
 snap installed. `villagesql.config` prints the flags:
 
 ```shell
-sudo villagesql.config --version        # mysql-8.4_0.0.6
+sudo villagesql.config --version        # 0.0.7
 sudo villagesql.config --cmake          # -DCMAKE_PREFIX_PATH=/snap/villagesql/<rev>/usr
 cmake -S . -B build $(sudo villagesql.config --cmake) && cmake --build build
 sudo cp build/my_extension.veb /var/snap/villagesql/common/veb/   # until the next restart

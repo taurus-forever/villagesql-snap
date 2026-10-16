@@ -1,6 +1,6 @@
 name: villagesql-uuid
 base: core26
-version: '0.0.6'
+version: '0.0.7'
 summary: vsql_uuid extension for the VillageSQL snap (content interface)
 description: |
   Packages the upstream vsql-uuid extension (a UUID column type plus
@@ -23,7 +23,7 @@ platforms:
 slots:
   extensions:
     interface: content
-    content: villagesql-8.4-extensions
+    content: villagesql-extensions
     source:
       read:
         - $SNAP/uuid
@@ -32,7 +32,7 @@ parts:
   uuid:
     plugin: nil
     source: https://github.com/villagesql/vsql-uuid.git
-    source-tag: '0.0.6'
+    source-tag: '0.0.7'
     source-depth: 1
     build-packages:
       - build-essential
@@ -42,7 +42,7 @@ parts:
       - libssl-dev
     override-build: |
       set -e
-      SDK_VERSION=0.0.6
+      SDK_VERSION=0.0.7
       SDK_URL="https://github.com/villagesql/villagesql-server/releases"
       SDK_URL="$SDK_URL/download/release%2F${SDK_VERSION}"
       SDK_URL="$SDK_URL/villagesql-extension-sdk-${SDK_VERSION}.tar.gz"
