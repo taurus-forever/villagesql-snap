@@ -51,10 +51,11 @@ The dependency lists come from upstream's `setup_linux_build_env.sh` on
 each tag. Percona's tree turns the LDAP and Kerberos auth plugins on by
 default and fails to configure without their libraries, hence the extra
 packages; snapcraft pulls the transitive runtime libraries (krb5, gssapi)
-in with the listed stage packages. A first build of each new branch may
-surface a further missing package; the implementation plan treats the
-first `snapcraft pack` of `9.7/edge` and `percona-8.4/edge` as a spike
-whose findings are folded back into this table.
+in with the listed stage packages. The first builds of `9.7/edge` and
+`percona-8.4/edge` (2026-10-16) needed nothing beyond this table. The
+Percona tree names its client library `libperconaserverclient.so`, which
+the branch primes out like `libmysqlclient.so` on the others (nothing in
+the snap links to it).
 
 `-DVSQL_PRE_RELEASE_VERSION=` stays, so the server reports
 `<codebase>_0.0.7` rather than `0.0.7-dev` (the tags still carry
@@ -141,8 +142,13 @@ branch's codebase. Changes to `spread/tests/`:
 - `extension_snap_hello` and `extension_snap_uuid` run unchanged on every
   branch, which is what shows a single provider build serving all three
   codebases. `extension_snap_uuid` asserts version `0.0.7`.
-- `smoke` additionally checks `$SNAP/codebase` and
+- `smoke` additionally checks `.snap-data-codebase` and
   `@@villagesql_server_version` (`${CODEBASE}_0.0.7`) against `CODEBASE`.
+- `cli_config` derives the SDK version from the recipe: since 0.0.7
+  `villagesql_config --version` prints `0.0.7` without a codebase.
+- `cli_mysqldump` passes `--set-gtid-purged=OFF`: MySQL 9.7 enables GTIDs
+  by default, so a dump restored onto the same server fails otherwise.
+  docs/commands.md documents this for users of the `9.7` track.
 - A `percona` smoke check on `percona-8.4/edge` only: the audit log
   plugin loads and `CREATE TABLE ... ENGINE=ROCKSDB` fails, matching the
   upstream Percona page.
