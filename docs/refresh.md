@@ -19,6 +19,15 @@ existing connection), and bundles built against the 0.0.6 SDK keep loading.
 Refresh the providers themselves at your own pace (`villagesql-uuid` 0.0.7
 tracks upstream).
 
+Installs made with `snap install villagesql --edge` track `latest/edge`,
+which currently receives the same `mysql-8.4` build as `8.4/edge`. Move to
+the track explicitly so that a later change of the store's default track
+cannot surprise you:
+
+```shell
+sudo snap refresh villagesql --channel 8.4/edge
+```
+
 ## Codebases and tracks
 
 Upstream publishes VillageSQL for three *codebases*, each on its own snap
@@ -36,11 +45,14 @@ the older marker `.snap-data-major` holding `8.4`, which counts as
 To move to another track, dump and restore:
 
 ```shell
-sudo villagesql.mysqldump -uroot --all-databases --routines --events > all.sql
+sudo villagesql.mysqldump -uroot --all-databases --routines --events --set-gtid-purged=OFF > all.sql
 sudo snap remove --purge villagesql
 sudo snap install villagesql --channel 9.7/stable
 sudo villagesql.mysql -uroot < all.sql
 ```
+
+`--set-gtid-purged=OFF` matters when the dump comes from the `9.7` track,
+where GTIDs are on by default (see docs/commands.md).
 
 ## Rolling back
 

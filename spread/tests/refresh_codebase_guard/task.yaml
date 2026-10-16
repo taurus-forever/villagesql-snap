@@ -34,6 +34,9 @@ execute: |
   FOREIGN=mysql-9.7; [ "$CODEBASE" != "mysql-9.7" ] || FOREIGN=mysql-8.4
   echo "$FOREIGN" > "$M/.snap-data-codebase"; rm -f "$M/.snap-data-major"
   refresh_expect rejected "is from codebase $FOREIGN but this revision provides ${CODEBASE}"
+  # The restarted revision must not re-stamp the marker: it records the
+  # codebase that initialised the data, not whoever ran last.
+  grep -x "$FOREIGN" "$M/.snap-data-codebase"
 
   echo "Case 2: a legacy marker with an unknown value is rejected on every branch..."
   rm -f "$M/.snap-data-codebase"; echo "9.7" > "$M/.snap-data-major"
