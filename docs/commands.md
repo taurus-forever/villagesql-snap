@@ -32,7 +32,7 @@ sudo tail /var/snap/villagesql/common/log/error.log
 +-------------------------+
 | VERSION()               |
 +-------------------------+
-| 8.4.11-villagesql-0.0.6 |
+| 8.4.11-villagesql-0.0.7 |
 +-------------------------+
 
 > sudo villagesql.mysqladmin -uroot ping

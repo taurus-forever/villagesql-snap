@@ -38,6 +38,7 @@ def test_all_services():
 def test_version():
     snapcraft = _snapcraft()
     mysql_version, vsql_version = snapcraft["version"].split("-", 1)
+    vsql_version = vsql_version.split("+", 1)[0]  # drop a +percona style suffix
     out = subprocess.check_output(
         ["sudo", f"{snapcraft['name']}.mysql", "-uroot", "-N", "-e", "SELECT VERSION();"]
     ).decode()

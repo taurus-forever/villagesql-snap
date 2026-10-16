@@ -1,13 +1,17 @@
 name: villagesql
 base: core26
-version: '8.4.11-0.0.6'
-summary: VillageSQL (MySQL 8.4 with extensions) in a snap.
+version: '8.4.11-0.0.7'
+summary: VillageSQL 0.0.7 (MySQL 8.4 codebase) with extensions in a snap.
 description: |
   VillageSQL Server for MySQL is an open-source, drop-in replacement for
   MySQL 8.4 that adds an extension framework: custom data types and
   functions are loaded at run time with INSTALL EXTENSION. This snap builds
   VillageSQL from source and lets extensions be shipped as separate snaps
   connected through the content interface.
+
+  This track builds the mysql-8.4 codebase. Tracks 9.7 (MySQL 9.7) and
+  percona-8.4 (Percona Server 8.4) build the other codebases; a data
+  directory belongs to one codebase and cannot be moved between tracks.
 title: VillageSQL
 contact: https://matrix.to/#/#charmhub-data-platform:ubuntu.com
 license: "Apache-2.0 AND GPL-2.0"
@@ -88,7 +92,7 @@ parts:
   villagesql:
     plugin: cmake
     source: https://github.com/villagesql/villagesql-server.git
-    source-tag: release/0.0.6
+    source-tag: publish/mysql-8.4_0.0.7
     source-depth: 1
     cmake-generator: Ninja
     cmake-parameters:

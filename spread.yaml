@@ -11,6 +11,8 @@ backends:
 suites:
   spread/tests/:
     summary: General integration tests
+    environment:
+      CODEBASE: mysql-8.4   # branch-specific: the upstream codebase this branch builds
     prepare-each: |
       snap install "$CRAFT_ARTIFACT" --dangerous --jailmode
       timeout 90 /bin/bash -c \

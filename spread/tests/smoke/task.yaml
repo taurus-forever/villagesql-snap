@@ -4,9 +4,10 @@ execute: |
   echo "Running smoke test..."
   SNAP_VERSION=$(awk -F"'" '/^version/{print $2}' "${PROJECT_PATH}/snap/snapcraft.yaml")
   MYSQL_VERSION="${SNAP_VERSION%%-*}"
-  VSQL_VERSION="${SNAP_VERSION#*-}"
+  VSQL_VERSION="${SNAP_VERSION#*-}"; VSQL_VERSION="${VSQL_VERSION%%+*}"   # drop a +percona style suffix
   villagesql.mysql -uroot -N -e "SELECT VERSION();" | \
     grep -E "^${MYSQL_VERSION}-villagesql-${VSQL_VERSION}"
+  villagesql.mysql -uroot -N -e "SELECT @@villagesql_server_version;" | grep -x "${CODEBASE}_${VSQL_VERSION}"
   snap services villagesql | grep -E "villagesql.villagesql\s+enabled\s+active"
 
   echo "Ensure the server runs as _daemon_ with the snap's paths..."
