@@ -14,7 +14,7 @@ execute: |
   villagesql.mysql -uroot -N -e "SELECT @@datadir;" | grep -x "/var/snap/villagesql/common/data/"
   villagesql.mysql -uroot -N -e "SELECT @@socket;" | grep -x "/tmp/mysql.sock"
   test "$(stat -c %u /var/snap/villagesql/common/data)" = "584792"
-  grep -x "8.4" /var/snap/villagesql/common/.snap-data-major
+  grep -x "${CODEBASE}" /var/snap/villagesql/common/.snap-data-codebase
 
   echo "Ensure no AppArmor denials from the daemon..."
   if journalctl -k | grep 'apparmor="DENIED"' | grep 'profile="snap.villagesql.villagesql"'; then

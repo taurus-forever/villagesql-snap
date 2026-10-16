@@ -1,0 +1,53 @@
+summary: A refresh onto data from another codebase is rolled back
+
+execute: |
+  M=/var/snap/villagesql/common
+  MYSQL="villagesql.mysql -uroot -N"
+  wait_ready() {
+    timeout 90 /bin/bash -c \
+      "while ! villagesql.mysqladmin -uroot ping >/dev/null 2>&1; do sleep 1; done"
+  }
+  revision() { snap list villagesql | awk 'NR == 2 {print $3}'; }
+
+  villagesql.mysql -uroot -e "CREATE DATABASE guard; CREATE TABLE guard.t (id INT); INSERT INTO guard.t VALUES (1);"
+
+  # refresh_expect <accepted|rejected> <message-to-grep-on-rejection>
+  refresh_expect() {
+    local before after
+    before="$(revision)"
+    if snap install "$CRAFT_ARTIFACT" --dangerous --jailmode > /tmp/refresh.log 2>&1; then
+      cat /tmp/refresh.log
+      if [ "$1" != accepted ]; then echo "ERROR: refresh succeeded but should have been rolled back" >&2; exit 1; fi
+      after="$(revision)"; test "$before" != "$after"
+    else
+      cat /tmp/refresh.log
+      if [ "$1" != rejected ]; then echo "ERROR: refresh was rolled back but should have succeeded" >&2; exit 1; fi
+      grep -q "$2" /tmp/refresh.log
+      after="$(revision)"; test "$before" = "$after"
+    fi
+    echo "The revision $after is serving the data..."
+    wait_ready
+    $MYSQL -e "SELECT id FROM guard.t;" | grep -x 1
+  }
+
+  echo "Case 1: data from another codebase is rejected on every branch..."
+  echo "mysql-9.7" > "$M/.snap-data-codebase"; rm -f "$M/.snap-data-major"
+  refresh_expect rejected "is from codebase mysql-9.7 but this revision provides ${CODEBASE}"
+
+  echo "Case 2: a legacy marker with an unknown value is rejected on every branch..."
+  rm -f "$M/.snap-data-codebase"; echo "9.7" > "$M/.snap-data-major"
+  refresh_expect rejected "cannot tell which codebase"
+
+  echo "Case 3: the legacy 0.0.6 marker (8.4) means mysql-8.4..."
+  rm -f "$M/.snap-data-codebase"; echo "8.4" > "$M/.snap-data-major"
+  if [ "$CODEBASE" = "mysql-8.4" ]; then
+    refresh_expect accepted
+    grep -x "mysql-8.4" "$M/.snap-data-codebase"
+    test ! -e "$M/.snap-data-major"
+  else
+    refresh_expect rejected "is from codebase mysql-8.4 but this revision provides ${CODEBASE}"
+  fi
+
+restore: |
+  echo "${CODEBASE}" > /var/snap/villagesql/common/.snap-data-codebase
+  rm -f /var/snap/villagesql/common/.snap-data-major

@@ -44,6 +44,7 @@ execute: |
   villagesql.mysql -uroot -N -e "SELECT name FROM refresh.t;" | grep -x test2
   villagesql.mysql -uroot -N -e "SELECT plugin FROM mysql.user WHERE user='root';" | grep -x auth_socket
   villagesql.mysql -ukeep -pkeeppass -h127.0.0.1 -N -e "SELECT 1;" | grep -x 1
-  grep -x "8.4" /var/snap/villagesql/common/.snap-data-major
+  grep -x "${CODEBASE}" /var/snap/villagesql/common/.snap-data-codebase
+  test ! -e /var/snap/villagesql/common/.snap-data-major
 
   echo "Test refresh completed."

@@ -136,6 +136,11 @@ parts:
       rm -rf storage/ndb
     override-build: |
       craftctl default
+      # The codebase (mysql-8.4, mysql-9.7, percona-8.4) this revision was
+      # built from, read by the hooks: a data directory belongs to one.
+      sed -n 's/^VSQL_CODE_BASE=//p' "$CRAFT_PART_SRC/VSQL_VERSION" \
+        | tr -d '[:space:]' > "$CRAFT_PART_INSTALL/codebase"
+      test -s "$CRAFT_PART_INSTALL/codebase"
       # Strip the server and clients: unstripped binaries would make the
       # snap several hundred MB.
       find "$CRAFT_PART_INSTALL/usr/bin" "$CRAFT_PART_INSTALL/usr/lib" \
@@ -176,3 +181,4 @@ parts:
       extensions-env.sh: bin/extensions-env.sh
       extensions.sh: bin/extensions.sh
       render-config.sh: bin/render-config.sh
+      codebase.sh: bin/codebase.sh

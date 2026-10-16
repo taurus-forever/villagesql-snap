@@ -53,7 +53,8 @@ if [ ! -d "$SNAP_COMMON/data/mysql" ]; then
     --init-file="$SNAP/default-config/init.sql"
 fi
 
-echo "$SNAP_VERSION" | cut -d. -f1-2 > "$SNAP_COMMON/.snap-data-major"
+. "$SNAP/bin/codebase.sh"
+write_data_codebase
 
 # Render conf.d/00-snap.cnf from the (default) snap options now, so that the
 # configure hook, which snapd runs after the service has started, finds it

@@ -8,9 +8,10 @@ if [ "${EUID}" != "0" ]; then
   exit 1
 fi
 
-# Record which MySQL major runs on this data directory; read by post-refresh.
+# Record which VillageSQL codebase runs on this data directory; read by post-refresh.
+. "$SNAP/bin/codebase.sh"
 if [ -d "$SNAP_COMMON/data/mysql" ]; then
-  echo "$SNAP_VERSION" | cut -d. -f1-2 > "$SNAP_COMMON/.snap-data-major"
+  write_data_codebase
 fi
 
 # mysqld would try systemd's notify socket if the variable were set; the
