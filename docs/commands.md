@@ -42,6 +42,12 @@ mysqld is alive
 ```
 </details>
 
+GTIDs are enabled by default on the `9.7` track (MySQL 9.7). A dump taken
+there carries `GTID_PURGED` and can only be restored onto a server that has
+not executed those transactions, such as a fresh install; to restore it
+onto the same server (another database, for example) pass
+`--set-gtid-purged=OFF` to `villagesql.mysqldump`.
+
 ## Paths
 
 | Path | Content |
