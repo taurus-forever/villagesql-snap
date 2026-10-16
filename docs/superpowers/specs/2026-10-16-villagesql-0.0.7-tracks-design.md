@@ -30,7 +30,7 @@ branches use the `publish/` tags so that every branch names its codebase.
 | Tracks | One Snap Store track per upstream codebase, named as upstream names it: `8.4`, `9.7`, `percona-8.4`. Tracks `8.4` and `9.7` exist; `percona-8.4` is requested from the store team (the self-serve guardrail only accepts `major.minor`). |
 | Branches | One git branch per track, `<track>/edge`, as in postgresql-snap and as upstream keeps one branch per codebase. `8.4/edge` carries all shared work; `9.7/edge` and `percona-8.4/edge` are branched from it and differ only in `snap/snapcraft.yaml`, the spread `CODEBASE` variable, wording in README and, on `percona-8.4/edge`, one Percona-only spread test. Later fixes flow by `git merge 8.4/edge` into the other branches. |
 | Publishing | Manual: the maintainer builds, tests locally and uploads to the track. The release workflow becomes a manual dispatch that derives the track from the branch name, ready for later automation. |
-| Codebase guard | The refresh guard compares codebases (`mysql-8.4`, `mysql-9.7`, `percona-8.4`), not MySQL majors. The codebase is read at run time from `villagesql_config --version`. |
+| Codebase guard | The refresh guard compares codebases (`mysql-8.4`, `mysql-9.7`, `percona-8.4`), not MySQL majors. The codebase is stamped into `$SNAP/codebase` at build time from upstream's `VSQL_VERSION` file (`VSQL_CODE_BASE=`); `villagesql_config --version` prints plain `0.0.7` since 0.0.7 and cannot serve. |
 | Extension label | The content interface label becomes `villagesql-extensions` on every track. One `.veb` serves every codebase: upstream ships one SDK tarball per release and the VEF ABI is protocol-versioned, not server-versioned. |
 | Example providers | `villagesql-uuid` is rebuilt from upstream tag `0.0.7` against SDK 0.0.7 (snap version `0.0.7`). `villagesql-hello` keeps SDK 0.0.6 on purpose, as the proof that older bundles still load; it gets version `1.0.1` for the label change. Both stay single-track on `latest`. |
 | Percona feature set | Follows upstream's own CI build (`villagesql/bld_tools/build_ci.sh` on the `percona-8.4` tag): MyRocks, coredumper and the KMIP keyring component off, OpenID Connect auth off, LDAP and Kerberos authentication on, curl from the system. |
@@ -67,9 +67,12 @@ another codebase, and there is no supported migration between codebases.
 The snap must therefore reject a refresh across codebases before the
 service is stopped, exactly as it rejects a MySQL major change today.
 
-- The codebase of a revision is `villagesql_config --version` up to the
-  first `_` (`mysql-8.4_0.0.7` gives `mysql-8.4`). A small shared shell
-  function in `snap/local/` provides it to the hooks and the wrapper.
+- The codebase of a revision is the content of `$SNAP/codebase`, written
+  by the `villagesql` part's `override-build` from the `VSQL_CODE_BASE=`
+  line of upstream's `VSQL_VERSION` (`mysql-8.4`, `mysql-9.7` or
+  `percona-8.4`), so no branch hand-maintains the value. Shell functions in
+  `snap/local/codebase.sh` read it and the data marker for the hooks and
+  the wrapper.
 - `mysqld.sh` and the `install` hook write the codebase to
   `$SNAP_COMMON/.snap-data-codebase` where they write
   `.snap-data-major` today, and `mysqld.sh` removes the legacy file once
@@ -138,8 +141,8 @@ branch's codebase. Changes to `spread/tests/`:
 - `extension_snap_hello` and `extension_snap_uuid` run unchanged on every
   branch, which is what shows a single provider build serving all three
   codebases. `extension_snap_uuid` asserts version `0.0.7`.
-- `smoke` additionally checks `villagesql.config --version` against
-  `${CODEBASE}_0.0.7` and `@@villagesql_server_version`.
+- `smoke` additionally checks `$SNAP/codebase` and
+  `@@villagesql_server_version` (`${CODEBASE}_0.0.7`) against `CODEBASE`.
 - A `percona` smoke check on `percona-8.4/edge` only: the audit log
   plugin loads and `CREATE TABLE ... ENGINE=ROCKSDB` fails, matching the
   upstream Percona page.
