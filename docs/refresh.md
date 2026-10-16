@@ -10,6 +10,15 @@ revisions, so data, accounts and configuration are kept.
 Handled in place: `mysqld` upgrades the data dictionary and the VillageSQL
 schema at start-up (`--upgrade=AUTO`). Nothing to do.
 
+## Refreshing from 0.0.6
+
+Nothing to do either. The extension snaps connected to 0.0.6 stay connected
+and keep working after the refresh (the content label changed to
+`villagesql-extensions` in 0.0.7, which snapd does not re-check for an
+existing connection), and bundles built against the 0.0.6 SDK keep loading.
+Refresh the providers themselves at your own pace (`villagesql-uuid` 0.0.7
+tracks upstream).
+
 ## Codebases and tracks
 
 Upstream publishes VillageSQL for three *codebases*, each on its own snap

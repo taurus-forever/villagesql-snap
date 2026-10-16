@@ -1,50 +1,91 @@
-summary: In-place refresh keeps data and the service running
+summary: Refresh from the previous release keeps data, service and connected extension snaps
 
 execute: |
+  MYSQL="villagesql.mysql -uroot -N"
   wait_ready() {
     timeout 90 /bin/bash -c \
       "while ! villagesql.mysqladmin -uroot ping >/dev/null 2>&1; do echo Waiting for villagesql...; sleep 1; done"
   }
+  revision() { snap list villagesql | awk 'NR == 2 {print $3}'; }
 
-  # Refresh FROM an older local build when one is provided as
-  # spread/villagesql_*.snap, otherwise from the artifact itself (still a real
-  # refresh for snapd: new revision, hooks, service stop/start).
-  PREV="$(ls "${PROJECT_PATH}"/spread/villagesql_*.snap 2>/dev/null | head -1)"
+  # Start FROM the previous release: local builds under spread/ when present
+  # (spread/villagesql_*.snap plus the two example providers), otherwise the
+  # store's latest/edge. Both paths are a real refresh for snapd: new
+  # revision, hooks, service stop/start.
+  ARCH="$(dpkg --print-architecture)"
+  PREV="$(ls "${PROJECT_PATH}"/spread/villagesql_*_"$ARCH".snap 2>/dev/null | head -1)"
+  snap remove villagesql --purge --terminate
   if [ -n "$PREV" ]; then
-    echo "Reinstalling the previous build $PREV..."
-    snap remove villagesql --purge --terminate
+    echo "Installing the previous local build $PREV and its providers..."
     snap install "$PREV" --dangerous --jailmode
-    wait_ready
+    snap install "${PROJECT_PATH}"/spread/villagesql-hello_*_"$ARCH".snap --dangerous
+    snap install "${PROJECT_PATH}"/spread/villagesql-uuid_*_"$ARCH".snap --dangerous
+  else
+    echo "Installing the previous release from the store (latest/edge)..."
+    snap install villagesql --edge
+    snap install villagesql-hello --edge
+    snap install villagesql-uuid --edge
   fi
-  REV_BEFORE="$(snap list villagesql | awk 'NR == 2 {print $3}')"
+  snap connect villagesql:extensions villagesql-hello:extensions
+  snap connect villagesql:extensions villagesql-uuid:extensions
+  snap restart villagesql
+  wait_ready
+  PREV_VERSION="$(snap list villagesql | awk 'NR == 2 {print $2}')"
+  REV_BEFORE="$(revision)"
+  snap connections villagesql
 
-  echo "Creating test data..."
+  echo "Creating test data, an account and a table with the UUID type..."
   villagesql.mysql -uroot -e "
     CREATE DATABASE refresh;
     CREATE TABLE refresh.t (id INT AUTO_INCREMENT PRIMARY KEY, name TEXT);
     INSERT INTO refresh.t (name) VALUES ('test1');
+    CREATE USER 'keep'@'%' IDENTIFIED BY 'keeppass';
+    INSTALL EXTENSION vsql_uuid;
+    CREATE TABLE refresh.u (id UUID PRIMARY KEY, name TEXT);
+    INSERT INTO refresh.u VALUES (UUID_V7(), 'before');
   "
-  villagesql.mysql -uroot -e "CREATE USER 'keep'@'%' IDENTIFIED BY 'keeppass';"
 
   echo "Refreshing to the current build..."
-  if ! snap install "$CRAFT_ARTIFACT" --dangerous --jailmode > /tmp/refresh.log 2>&1; then
-    cat /tmp/refresh.log
-    echo "ERROR: refresh failed" >&2
-    exit 1
-  fi
-  grep -E "villagesql [0-9.]+-[0-9.]+ installed" /tmp/refresh.log
-  REV_AFTER="$(snap list villagesql | awk 'NR == 2 {print $3}')"
-  test "$REV_BEFORE" != "$REV_AFTER"
-  wait_ready
-  snap services villagesql | grep -E "villagesql.villagesql\s+enabled\s+active"
+  snap install "$CRAFT_ARTIFACT" --dangerous --jailmode > /tmp/refresh.log 2>&1 || true
+  cat /tmp/refresh.log
+  snap connections villagesql || true
 
-  echo "Ensure data, accounts and config survived..."
-  villagesql.mysql -uroot -N -e "SELECT name FROM refresh.t;" | grep -x test1
-  villagesql.mysql -uroot -e "INSERT INTO refresh.t (name) VALUES ('test2');"
-  villagesql.mysql -uroot -N -e "SELECT name FROM refresh.t;" | grep -x test2
-  villagesql.mysql -uroot -N -e "SELECT plugin FROM mysql.user WHERE user='root';" | grep -x auth_socket
-  villagesql.mysql -ukeep -pkeeppass -h127.0.0.1 -N -e "SELECT 1;" | grep -x 1
-  grep -x "${CODEBASE}" /var/snap/villagesql/common/.snap-data-codebase
-  test ! -e /var/snap/villagesql/common/.snap-data-major
+  if [ "$CODEBASE" = "mysql-8.4" ]; then
+    echo "Same codebase: the refresh must have succeeded..."
+    grep -E "villagesql [0-9.]+-[0-9.+a-z]+ installed" /tmp/refresh.log
+    test "$REV_BEFORE" != "$(revision)"
+    wait_ready
+    snap services villagesql | grep -E "villagesql.villagesql\s+enabled\s+active"
+
+    echo "Ensure data, accounts and config survived..."
+    $MYSQL -e "SELECT name FROM refresh.t;" | grep -x test1
+    villagesql.mysql -uroot -e "INSERT INTO refresh.t (name) VALUES ('test2');"
+    $MYSQL -e "SELECT name FROM refresh.t;" | grep -x test2
+    $MYSQL -e "SELECT plugin FROM mysql.user WHERE user='root';" | grep -x auth_socket
+    villagesql.mysql -ukeep -pkeeppass -h127.0.0.1 -N -e "SELECT 1;" | grep -x 1
+    grep -x "${CODEBASE}" /var/snap/villagesql/common/.snap-data-codebase
+    test ! -e /var/snap/villagesql/common/.snap-data-major
+
+    echo "Ensure the extension snaps are still connected and working..."
+    snap connections villagesql | grep -E "villagesql:extensions\s+villagesql-hello:extensions"
+    snap connections villagesql | grep -E "villagesql:extensions\s+villagesql-uuid:extensions"
+    villagesql.extensions list
+    villagesql.extensions list | grep -E "^vsql_uuid\s+\S+\s+snap:uuid\s+yes$"
+    $MYSQL -e "SELECT name FROM refresh.u;" | grep -x before
+    villagesql.mysql -uroot -e "INSERT INTO refresh.u VALUES (UUID_V7(), 'after');"
+    $MYSQL -e "SELECT COUNT(*) FROM refresh.u;" | grep -x 2
+    $MYSQL -e "SELECT UUID_VERSION(UUID_V7());" | grep -x 7
+  else
+    echo "Other codebase: the refresh must have been rolled back..."
+    grep -q "is from codebase mysql-8.4 but this revision provides ${CODEBASE}" /tmp/refresh.log
+    test "$REV_BEFORE" = "$(revision)"
+    snap list villagesql | awk 'NR == 2 {print $2}' | grep -x "$PREV_VERSION"
+    wait_ready
+    $MYSQL -e "SELECT name FROM refresh.u;" | grep -x before
+  fi
 
   echo "Test refresh completed."
+
+restore: |
+  snap remove villagesql-hello 2>/dev/null || true
+  snap remove villagesql-uuid 2>/dev/null || true
