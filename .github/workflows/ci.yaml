@@ -44,14 +44,20 @@ jobs:
   build:
     name: Build snap
     uses: canonical/data-platform-workflows/.github/workflows/build_snap.yaml@v53.0.0
-    timeout-minutes: 120
+    with:
+      # Compiling the server takes ~60-70 min on a 4 vCPU hosted runner; the
+      # reusable workflow's default is 30. `timeout-minutes` is not allowed on
+      # a job that calls a reusable workflow (GitHub rejects the whole file).
+      build-timeout: 120
     permissions:
       contents: read
     cache-mode: none
 
   test:
     name: Test snap | ${{ matrix.base.version }} ${{ matrix.platform.arch }}
-    timeout-minutes: 60
+    # `snapcraft test` runs the whole suite on three systems: ~16 min on 12
+    # cores, several times that on a 4 vCPU runner.
+    timeout-minutes: 120
     # runs-on: [self-hosted, linux, "${{ matrix.platform.host_arch }}", "${{ matrix.base.codename }}", large]
     runs-on: "ubuntu-${{ matrix.base.version }}${{ matrix.platform.gh_suffix }}"
     strategy:
