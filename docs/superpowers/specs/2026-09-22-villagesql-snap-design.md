@@ -116,6 +116,21 @@ values fail the hook so `snap set` reports the error and the previous value
 stays. Anything else goes in the administrator's own `conf.d/*.cnf`,
 followed by `sudo snap restart villagesql`.
 
+**Update 2026-10-20.** The fixed set was too narrow: `snap set villagesql
+key-cache-age-threshold=500` was stored by snapd (so `snap get` showed it)
+but never reached the server. The configure hook now renders every snap
+option into `[mysqld]` (dashes become underscores, an empty value renders the
+bare option name). It enumerates the options with `snapctl get "" ""` (the
+empty key names the whole document, as `snap get <snap>` does over the API;
+snapctl needs two positionals to accept it) and runs the candidate file
+through `mysqld --validate-config` before installing it, so unknown options
+and bad values still fail `snap set` and keep the previous configuration
+instead of leaving the server unable to start. The checks on `port`,
+`bind-address` and `max-connections` stay (mysqld only clamps those). Values
+with quotes, backslashes or `#`, nested or list values, and the options fixed
+on the command line (`datadir`, `basedir`, `socket`, `pid-file`, `log-error`,
+`veb-dir`) are rejected; those still go in `conf.d`.
+
 ## In-place refresh (step 3)
 
 - The daemon wrapper writes `.snap-data-major` after every successful start.
@@ -209,7 +224,7 @@ removes it with `--purge`.
 | `smoke` | version string, service active, every non-daemon app answers `--help`, no AppArmor denials from the daemon. |
 | `cli_mysql`, `cli_mysqladmin`, `cli_mysqldump`, `cli_mysqlbinlog`, `cli_mysqlcheck`, `cli_config` | one real use of each app. |
 | `auth` | root over socket needs no password; root over TCP is refused; a created user works over TCP. |
-| `config` | `snap set` port and bind-address take effect, invalid values are rejected, `conf.d` snippet is honoured. |
+| `config` | `snap set` port, bind-address and any other server option take effect, invalid values and unknown options are rejected, `conf.d` snippet is honoured. |
 | `storage` | data directory bind-mounted elsewhere, data survives. |
 | `refresh` | install the previous local build, create data, refresh to the current build, data readable and writable, service active. |
 | `refresh_major_guard` | fake `.snap-data-major=9.7`, refresh is rolled back. |

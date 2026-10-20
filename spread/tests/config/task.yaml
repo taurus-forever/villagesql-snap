@@ -34,6 +34,33 @@ execute: |
   timeout 90 /bin/bash -c \
     "until villagesql.mysql -uroot -N -e 'SELECT @@max_connections;' 2>/dev/null | grep -qx 151; do sleep 1; done"
 
+  echo "Any other server option is passed through to [mysqld]..."
+  snap set villagesql key-cache-age-threshold=500 \
+    sql-mode=STRICT_TRANS_TABLES,NO_ENGINE_SUBSTITUTION local-infile=ON
+  timeout 90 /bin/bash -c \
+    "until villagesql.mysql -uroot -N -e 'SELECT @@key_cache_age_threshold;' 2>/dev/null | grep -qx 500; do sleep 1; done"
+  villagesql.mysql -uroot -N -e "SELECT @@sql_mode;" | grep -x "STRICT_TRANS_TABLES,NO_ENGINE_SUBSTITUTION"
+  villagesql.mysql -uroot -N -e "SELECT @@local_infile;" | grep -x 1
+  grep -x "key_cache_age_threshold = 500" /var/snap/villagesql/common/etc/conf.d/00-snap.cnf
+
+  echo "Options mysqld does not accept are rejected before any restart..."
+  ! snap set villagesql no-such-option=1
+  ! snap set villagesql sql-mode=NO_SUCH_MODE
+  ! snap set villagesql innodb-buffer-pool-size=abc
+  ! snap set villagesql datadir=/tmp
+  ! snap set villagesql nested.key=1
+  ! snap set villagesql init-connect="SET NAMES 'utf8mb4'"
+  ! snap get villagesql no-such-option
+  snap get villagesql sql-mode | grep -x "STRICT_TRANS_TABLES,NO_ENGINE_SUBSTITUTION"
+  villagesql.mysql -uroot -N -e "SELECT @@key_cache_age_threshold;" | grep -x 500
+  ! grep -q no_such_option /var/snap/villagesql/common/etc/conf.d/00-snap.cnf
+
+  echo "Unsetting an option restores the server default..."
+  snap unset villagesql key-cache-age-threshold sql-mode local-infile
+  timeout 90 /bin/bash -c \
+    "until villagesql.mysql -uroot -N -e 'SELECT @@key_cache_age_threshold;' 2>/dev/null | grep -qx 300; do sleep 1; done"
+  ! grep -q local_infile /var/snap/villagesql/common/etc/conf.d/00-snap.cnf
+
   echo "Administrator snippets in conf.d are honoured after a restart..."
   cat > /var/snap/villagesql/common/etc/conf.d/90-spread.cnf <<'CNF'
   [mysqld]
