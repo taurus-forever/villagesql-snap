@@ -11,8 +11,8 @@ execute: |
   # Start FROM the previous release: local builds under spread/ when present
   # (spread/villagesql_*.snap plus the two example providers), otherwise the
   # store's edge channel of this branch's track (mysql-8.4 -> 8.4/edge), or
-  # the store's default track (9.7; there is no latest track) when this
-  # track does not exist yet. Both paths are a real refresh for snapd: new
+  # the store's default track (--edge, 9.7 today) should this branch's
+  # track not exist yet. Both paths are a real refresh for snapd: new
   # revision, hooks, service stop/start. The previous release may come from
   # another codebase (0.0.6 local builds are mysql-8.4 on every branch, the
   # default track is mysql-9.7): the refresh must then be rolled back.

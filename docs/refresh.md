@@ -19,11 +19,11 @@ existing connection), and bundles built against the 0.0.6 SDK keep loading.
 Refresh the providers themselves at your own pace (`villagesql-uuid` 0.0.7
 tracks upstream).
 
-The `latest` track is gone and the store's default track is `9.7`, so
-`snap install villagesql --edge` now installs the `mysql-9.7` codebase. An
-install made earlier with `--edge` still tracks `latest/edge`, which no
-longer receives anything: move it to the track of its codebase (the
-refresh is refused on any other one, see below):
+The store's default track is `9.7`, so `snap install villagesql --edge`
+installs the `mysql-9.7` codebase. An install made with `--edge` before the
+default track was set still follows `latest/edge`, which receives no
+releases any more: move it to the track of its codebase (a refresh onto
+any other codebase is refused, see below):
 
 ```shell
 sudo snap refresh villagesql --channel 8.4/edge
