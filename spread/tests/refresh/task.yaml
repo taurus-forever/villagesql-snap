@@ -21,20 +21,50 @@ execute: |
   PREV="$(ls "${PROJECT_PATH}"/spread/villagesql_*_"$ARCH".snap 2>/dev/null | head -1)"
   snap remove villagesql --purge --terminate
   if [ -n "$PREV" ]; then
-    echo "Installing the previous local build $PREV and its providers..."
+    echo "Installing the previous local build $PREV..."
     snap install "$PREV" --dangerous --jailmode
-    snap install "${PROJECT_PATH}"/spread/villagesql-hello_*_"$ARCH".snap --dangerous
-    snap install "${PROJECT_PATH}"/spread/villagesql-uuid_*_"$ARCH".snap --dangerous
   else
     echo "Installing the previous release from the store (${TRACK}/edge, else the default track)..."
     snap install villagesql --channel "${TRACK}/edge" || snap install villagesql --edge
-    snap install villagesql-hello --edge
-    snap install villagesql-uuid --edge
   fi
-  snap connect villagesql:extensions villagesql-hello:extensions
-  snap connect villagesql:extensions villagesql-uuid:extensions
-  snap restart villagesql
-  wait_ready
+  for provider in villagesql-hello villagesql-uuid; do
+    LOCAL="$(ls "${PROJECT_PATH}"/spread/"$provider"_*_"$ARCH".snap 2>/dev/null | head -1)"
+    if [ -n "$LOCAL" ]; then snap install "$LOCAL" --dangerous; else snap install "$provider" --edge; fi
+  done
+
+  # Store snaps only connect when the plug's and the slot's content labels
+  # match: 0.0.6 used villagesql-8.4-extensions, 0.0.7 villagesql-extensions,
+  # and the store's providers carry the new label. A 0.0.6 previous release
+  # from the store (a track whose 0.0.7 is not published for this arch yet)
+  # therefore gets its providers connected after the refresh instead.
+  content_label() {
+    awk -v section="$2:" '$0 == section {s=1; next} s && /^[^ ]/ {s=0} s && /^ +content: / {print $2; exit}' \
+      "/snap/$1/current/meta/snap.yaml"
+  }
+  connect_providers() {
+    snap connect villagesql:extensions villagesql-hello:extensions
+    snap connect villagesql:extensions villagesql-uuid:extensions
+    snap restart villagesql
+    wait_ready
+  }
+  create_uuid_table() {
+    villagesql.mysql -uroot -e "
+      INSTALL EXTENSION vsql_uuid;
+      CREATE TABLE refresh.u (id UUID PRIMARY KEY, name TEXT);
+      INSERT INTO refresh.u VALUES (UUID_V7(), 'before');
+    "
+  }
+  PLUG_LABEL="$(content_label villagesql plugs)"
+  SLOT_LABEL="$(content_label villagesql-hello slots)"
+  if [ "$PLUG_LABEL" = "$SLOT_LABEL" ]; then
+    EXT_BEFORE=yes
+    connect_providers
+  else
+    EXT_BEFORE=no
+    echo "The previous release's plug label $PLUG_LABEL differs from the providers' slot label $SLOT_LABEL:" \
+      "connecting the extension snaps after the refresh instead."
+    wait_ready
+  fi
   PREV_VERSION="$(snap list villagesql | awk 'NR == 2 {print $2}')"
   REV_BEFORE="$(revision)"
   snap connections villagesql
@@ -48,16 +78,17 @@ execute: |
   fi
   echo "Previous release: $PREV_VERSION ($PREV_CODEBASE), current build: ${CODEBASE}"
 
-  echo "Creating test data, an account and a table with the UUID type..."
+  echo "Creating test data and an account..."
   villagesql.mysql -uroot -e "
     CREATE DATABASE refresh;
     CREATE TABLE refresh.t (id INT AUTO_INCREMENT PRIMARY KEY, name TEXT);
     INSERT INTO refresh.t (name) VALUES ('test1');
     CREATE USER 'keep'@'%' IDENTIFIED BY 'keeppass';
-    INSTALL EXTENSION vsql_uuid;
-    CREATE TABLE refresh.u (id UUID PRIMARY KEY, name TEXT);
-    INSERT INTO refresh.u VALUES (UUID_V7(), 'before');
   "
+  if [ "$EXT_BEFORE" = yes ]; then
+    echo "Creating a table with the UUID type from the connected provider..."
+    create_uuid_table
+  fi
 
   echo "Refreshing to the current build..."
   snap install "$CRAFT_ARTIFACT" --dangerous --jailmode > /tmp/refresh.log 2>&1 || true
@@ -80,7 +111,12 @@ execute: |
     grep -x "${CODEBASE}" /var/snap/villagesql/common/.snap-data-codebase
     test ! -e /var/snap/villagesql/common/.snap-data-major
 
-    echo "Ensure the extension snaps are still connected and working..."
+    if [ "$EXT_BEFORE" = no ]; then
+      echo "Connecting the extension snaps to the new revision (labels match now)..."
+      connect_providers
+      create_uuid_table
+    fi
+    echo "Ensure the extension snaps are connected and working..."
     snap connections villagesql | grep -E "villagesql:extensions\s+villagesql-hello:extensions"
     snap connections villagesql | grep -E "villagesql:extensions\s+villagesql-uuid:extensions"
     villagesql.extensions list
@@ -95,7 +131,8 @@ execute: |
     test "$REV_BEFORE" = "$(revision)"
     snap list villagesql | awk 'NR == 2 {print $2}' | grep -x "$PREV_VERSION"
     wait_ready
-    $MYSQL -e "SELECT name FROM refresh.u;" | grep -x before
+    $MYSQL -e "SELECT name FROM refresh.t;" | grep -x test1
+    [ "$EXT_BEFORE" = no ] || $MYSQL -e "SELECT name FROM refresh.u;" | grep -x before
   fi
 
   echo "Test refresh completed."
