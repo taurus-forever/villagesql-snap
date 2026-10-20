@@ -62,7 +62,10 @@ curl -fsSL https://api.github.com/repos/villagesql/villagesql-server/releases/ta
    exist yet (a new codebase). It works out the expected outcome from the
    codebase the previous release recorded: same codebase, the refresh must
    succeed; another one (the 0.0.6 builds on `9.7/edge`), the guard must
-   roll it back.
+   roll it back. The providers come from `spread/` too, else from the
+   store; when their content label differs from the previous release's
+   (0.0.6 from the store, as on arm64 while `8.4/edge` has no 0.0.7 there),
+   they are connected after the refresh instead of before.
 2. `snap/snapcraft.yaml`: `version`, `source-tag`, summary/description if
    wording changes. `docs/commands.md`: the `SELECT VERSION()` sample.
 3. Extensions: `extensions/villagesql-uuid/snap/snapcraft.yaml` (`version`,
@@ -105,6 +108,12 @@ the Percona build flags and packages against upstream's `build_ci.sh` and
 | `villagesql_9.7.*` | `9.7/edge` |
 | `villagesql_8.4.*+percona` | `percona-8.4/edge` |
 | `villagesql-hello_*`, `villagesql-uuid_*` | `latest/edge`, in the same session as the servers |
+
+CI builds amd64 and arm64 through `build_snap.yaml` and riscv64 through
+the `build-riscv64` job in `ci.yaml` (RISE RISC-V Runners, snapcraft from
+pip in destructive mode inside an Ubuntu 26.04 container; release
+dispatches and PRs labelled `riscv64` only). The release workflow uploads
+all three. riscv64 has no spread run in CI: test it on the SpacemiT K3.
 
 The store's self-serve track guardrail accepts only `major.minor` names;
 other tracks go through a forum store-request (`percona-8.4` has releases since
