@@ -8,4 +8,3 @@ self-hosted-runner:
     - large
     - jammy
     - noble
-    - ubuntu-24.04-riscv  # RISE RISC-V Runners

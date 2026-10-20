@@ -53,57 +53,6 @@ jobs:
       contents: read
     cache-mode: none
 
-  build-riscv64:
-    name: Build snap | riscv64
-    # build_snap.yaml has no runner for riscv64 (amd64, arm64, s390x only), so
-    # this job builds it on the free RISE RISC-V Runners
-    # (https://riscv-runners.riseproject.dev/): an ephemeral pod on a shared
-    # Scaleway EM-RV1 node with Docker but no snapd, LXD or virtualization.
-    # The snap is therefore packed with snapcraft from pip in destructive mode
-    # inside an Ubuntu 26.04 container (the core26 build base). The artifact
-    # name matches build_snap.yaml's, so release.yaml picks it up with the
-    # other architectures. No spread run: riscv64 is tested by hand.
-    runs-on: ubuntu-24.04-riscv
-    # Compiling the server on the EM-RV1 is expected to take several hours.
-    timeout-minutes: 720
-    # Only for the release dispatch, or a pull request from this repository
-    # labelled `riscv64`, to keep the shared runners free for the common case.
-    if: >-
-      github.event_name != 'pull_request' ||
-      (github.event.pull_request.head.repo.full_name == github.repository &&
-       contains(github.event.pull_request.labels.*.name, 'riscv64'))
-    needs:
-      - lint-workflows
-      - lint
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-        with:
-          persist-credentials: false
-      - name: Pack in an Ubuntu 26.04 container (core26 build base)
-        run: |
-          docker run --rm --volume "${PWD}:/project" --workdir /project \
-            ubuntu:26.04 bash -ec '
-            export DEBIAN_FRONTEND=noninteractive
-            apt-get update
-            apt-get install -y --no-install-recommends \
-              ca-certificates git python3-pip python3-apt squashfs-tools
-            pip install --break-system-packages snapcraft
-            snapcraft pack --destructive-mode --platform riscv64 \
-              --verbosity brief
-          '
-          ls -l ./*.snap
-      - name: Upload snap package
-        uses: actions/upload-artifact@v7
-        with:
-          # build_snap.yaml pattern: <prefix>-<path>--platform-<arch>
-          name: packed-snap-.--platform-riscv64
-          path: "*.snap"
-          if-no-files-found: error
-    permissions:
-      contents: read
-    cache-mode: none
-
   test:
     name: Test snap | ${{ matrix.base.version }} ${{ matrix.platform.arch }}
     # `snapcraft test` runs the whole suite on three systems: ~16 min on 12
