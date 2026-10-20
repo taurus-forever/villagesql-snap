@@ -16,12 +16,14 @@ offers one track per codebase, built from the git branch of the same name:
 
 | Track | Codebase | Base server | Branch |
 | --- | --- | --- | --- |
-| `8.4` (`latest` is the same build for now) | `mysql-8.4` | MySQL 8.4 | `8.4/edge` |
+| `8.4` | `mysql-8.4` | MySQL 8.4 | `8.4/edge` |
 | `9.7` (this branch) | `mysql-9.7` | MySQL 9.7 | `9.7/edge` |
 | `percona-8.4` | `percona-8.4` | Percona Server 8.4 | `percona-8.4/edge` |
 
-A data directory belongs to one codebase and cannot be moved between
-tracks, see [docs/refresh.md](docs/refresh.md).
+The store's default track is `9.7`; there is no `latest` track, so always
+name the track: `snap install villagesql --channel 8.4/edge`. A data
+directory belongs to one codebase and cannot be moved between tracks, see
+[docs/refresh.md](docs/refresh.md).
 
 ## Install the snap
 
