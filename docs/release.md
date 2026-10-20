@@ -13,9 +13,9 @@ the 0.0.6 to 0.0.7 update (2026-10-16); the design is in
 | `9.7/edge` | `9.7` | `mysql-9.7` | `9.7.<p>-<vsql>` | `publish/mysql-9.7_<vsql>` |
 | `percona-8.4/edge` | `percona-8.4` | `percona-8.4` | `8.4.<p>-<vsql>+percona` | `publish/percona-8.4_<vsql>` |
 
-- The store's default track is `9.7` and there is no `latest` track any
-  more: `snap install villagesql --edge` means `9.7/edge`.
-  Users and tests must name the track.
+- The store's default track is set to `9.7`: `snap install villagesql
+  --edge` means `9.7/edge`. `latest` receives no releases. Docs and tests
+  name the track they mean (`--channel 8.4/edge`).
 - `8.4/edge` carries all shared work. The other branches are merged from
   it (`git merge 8.4/edge`) and differ **only** in `snap/snapcraft.yaml`,
   `spread.yaml` (`CODEBASE`), `README.md` (which row says "this branch")
@@ -58,11 +58,11 @@ curl -fsSL https://api.github.com/repos/villagesql/villagesql-server/releases/ta
    `spread/villagesql-hello_*`, `spread/villagesql-uuid_*`; `*.snap` is
    git-ignored). Without them (CI) the `refresh` test installs the previous
    release from the store: the branch's own track (`8.4/edge`), or the
-   default track `9.7/edge` when the branch's track does not exist yet
-   (`percona-8.4`). It works out the expected outcome from the codebase
-   the previous release recorded: same codebase, the refresh must succeed;
-   another one (0.0.6 builds on `9.7/edge`, `9.7/edge` on
-   `percona-8.4/edge`), the guard must roll it back.
+   default track (`--edge` = `9.7/edge`) should the branch's track not
+   exist yet (a new codebase). It works out the expected outcome from the
+   codebase the previous release recorded: same codebase, the refresh must
+   succeed; another one (the 0.0.6 builds on `9.7/edge`), the guard must
+   roll it back.
 2. `snap/snapcraft.yaml`: `version`, `source-tag`, summary/description if
    wording changes. `docs/commands.md`: the `SELECT VERSION()` sample.
 3. Extensions: `extensions/villagesql-uuid/snap/snapcraft.yaml` (`version`,
@@ -107,7 +107,8 @@ the Percona build flags and packages against upstream's `build_ci.sh` and
 | `villagesql-hello_*`, `villagesql-uuid_*` | `latest/edge`, in the same session as the servers |
 
 The store's self-serve track guardrail accepts only `major.minor` names;
-other tracks (`percona-8.4`) go through a forum store-request.
+other tracks go through a forum store-request (`percona-8.4` has releases since
+2026-10-20).
 
 ## Gotchas learned the hard way
 
