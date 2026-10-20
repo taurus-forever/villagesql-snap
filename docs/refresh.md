@@ -17,7 +17,9 @@ and keep working after the refresh (the content label changed to
 `villagesql-extensions` in 0.0.7, which snapd does not re-check for an
 existing connection), and bundles built against the 0.0.6 SDK keep loading.
 Refresh the providers themselves at your own pace (`villagesql-uuid` 0.0.7
-tracks upstream).
+tracks upstream). The other way round does not work: a 0.0.6 server cannot
+newly connect the 0.0.7 providers from the store, because snapd only
+connects store snaps whose content labels match. Refresh the server first.
 
 The store's default track is `9.7`, so `snap install villagesql --edge`
 installs the `mysql-9.7` codebase. An install made with `--edge` before the
