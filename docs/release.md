@@ -109,6 +109,12 @@ the Percona build flags and packages against upstream's `build_ci.sh` and
 | `villagesql_8.4.*+percona` | `percona-8.4/edge` |
 | `villagesql-hello_*`, `villagesql-uuid_*` | `latest/edge`, in the same session as the servers |
 
+CI builds amd64 and arm64 through `build_snap.yaml` and riscv64 through
+the `build-riscv64` job in `ci.yaml` (RISE RISC-V Runners, snapcraft from
+pip in destructive mode inside an Ubuntu 26.04 container; release
+dispatches and PRs labelled `riscv64` only). The release workflow uploads
+all three. riscv64 has no spread run in CI: test it on the SpacemiT K3.
+
 The store's self-serve track guardrail accepts only `major.minor` names;
 other tracks go through a forum store-request (`percona-8.4` has releases since
 2026-10-20).
