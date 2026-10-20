@@ -10,9 +10,14 @@ execute: |
 
   # Start FROM the previous release: local builds under spread/ when present
   # (spread/villagesql_*.snap plus the two example providers), otherwise the
-  # store's latest/edge. Both paths are a real refresh for snapd: new
-  # revision, hooks, service stop/start.
+  # store's edge channel of this branch's track (mysql-8.4 -> 8.4/edge), or
+  # the store's default track (9.7; there is no latest track) when this
+  # track does not exist yet. Both paths are a real refresh for snapd: new
+  # revision, hooks, service stop/start. The previous release may come from
+  # another codebase (0.0.6 local builds are mysql-8.4 on every branch, the
+  # default track is mysql-9.7): the refresh must then be rolled back.
   ARCH="$(dpkg --print-architecture)"
+  TRACK="${CODEBASE#mysql-}"
   PREV="$(ls "${PROJECT_PATH}"/spread/villagesql_*_"$ARCH".snap 2>/dev/null | head -1)"
   snap remove villagesql --purge --terminate
   if [ -n "$PREV" ]; then
@@ -21,8 +26,8 @@ execute: |
     snap install "${PROJECT_PATH}"/spread/villagesql-hello_*_"$ARCH".snap --dangerous
     snap install "${PROJECT_PATH}"/spread/villagesql-uuid_*_"$ARCH".snap --dangerous
   else
-    echo "Installing the previous release from the store (latest/edge)..."
-    snap install villagesql --edge
+    echo "Installing the previous release from the store (${TRACK}/edge, else the default track)..."
+    snap install villagesql --channel "${TRACK}/edge" || snap install villagesql --edge
     snap install villagesql-hello --edge
     snap install villagesql-uuid --edge
   fi
@@ -33,6 +38,15 @@ execute: |
   PREV_VERSION="$(snap list villagesql | awk 'NR == 2 {print $2}')"
   REV_BEFORE="$(revision)"
   snap connections villagesql
+  # Codebase of the data the previous release initialised, as the guard
+  # reads it (0.0.6 only wrote .snap-data-major=8.4, which means mysql-8.4).
+  if [ -f /var/snap/villagesql/common/.snap-data-codebase ]; then
+    PREV_CODEBASE="$(cat /var/snap/villagesql/common/.snap-data-codebase)"
+  else
+    grep -x "8.4" /var/snap/villagesql/common/.snap-data-major
+    PREV_CODEBASE=mysql-8.4
+  fi
+  echo "Previous release: $PREV_VERSION ($PREV_CODEBASE), current build: ${CODEBASE}"
 
   echo "Creating test data, an account and a table with the UUID type..."
   villagesql.mysql -uroot -e "
@@ -50,7 +64,7 @@ execute: |
   cat /tmp/refresh.log
   snap connections villagesql || true
 
-  if [ "$CODEBASE" = "mysql-8.4" ]; then
+  if [ "$PREV_CODEBASE" = "$CODEBASE" ]; then
     echo "Same codebase: the refresh must have succeeded..."
     grep -E "villagesql [0-9.]+-[0-9.+a-z]+ installed" /tmp/refresh.log
     test "$REV_BEFORE" != "$(revision)"
@@ -77,7 +91,7 @@ execute: |
     $MYSQL -e "SELECT UUID_VERSION(UUID_V7());" | grep -x 7
   else
     echo "Other codebase: the refresh must have been rolled back..."
-    grep -q "is from codebase mysql-8.4 but this revision provides ${CODEBASE}" /tmp/refresh.log
+    grep -q "is from codebase ${PREV_CODEBASE} but this revision provides ${CODEBASE}" /tmp/refresh.log
     test "$REV_BEFORE" = "$(revision)"
     snap list villagesql | awk 'NR == 2 {print $2}' | grep -x "$PREV_VERSION"
     wait_ready

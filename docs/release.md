@@ -9,10 +9,13 @@ the 0.0.6 to 0.0.7 update (2026-10-16); the design is in
 
 | Branch | Store track | Codebase (`$SNAP/codebase`) | Snap version pattern | Upstream tag |
 | --- | --- | --- | --- | --- |
-| `8.4/edge` | `8.4` (and `latest` for now) | `mysql-8.4` | `8.4.<p>-<vsql>` | `publish/mysql-8.4_<vsql>` |
+| `8.4/edge` | `8.4` | `mysql-8.4` | `8.4.<p>-<vsql>` | `publish/mysql-8.4_<vsql>` |
 | `9.7/edge` | `9.7` | `mysql-9.7` | `9.7.<p>-<vsql>` | `publish/mysql-9.7_<vsql>` |
 | `percona-8.4/edge` | `percona-8.4` | `percona-8.4` | `8.4.<p>-<vsql>+percona` | `publish/percona-8.4_<vsql>` |
 
+- The store's default track is `9.7` and there is no `latest` track any
+  more: `snap install villagesql --edge` means `9.7/edge`.
+  Users and tests must name the track.
 - `8.4/edge` carries all shared work. The other branches are merged from
   it (`git merge 8.4/edge`) and differ **only** in `snap/snapcraft.yaml`,
   `spread.yaml` (`CODEBASE`), `README.md` (which row says "this branch")
@@ -53,8 +56,13 @@ curl -fsSL https://api.github.com/repos/villagesql/villagesql-server/releases/ta
    snap and both provider snaps of the release users have go under
    `spread/` (`spread/villagesql_<old>_<arch>.snap`,
    `spread/villagesql-hello_*`, `spread/villagesql-uuid_*`; `*.snap` is
-   git-ignored). Without them the `refresh` test uses the store's
-   `latest/edge`.
+   git-ignored). Without them (CI) the `refresh` test installs the previous
+   release from the store: the branch's own track (`8.4/edge`), or the
+   default track `9.7/edge` when the branch's track does not exist yet
+   (`percona-8.4`). It works out the expected outcome from the codebase
+   the previous release recorded: same codebase, the refresh must succeed;
+   another one (0.0.6 builds on `9.7/edge`, `9.7/edge` on
+   `percona-8.4/edge`), the guard must roll it back.
 2. `snap/snapcraft.yaml`: `version`, `source-tag`, summary/description if
    wording changes. `docs/commands.md`: the `SELECT VERSION()` sample.
 3. Extensions: `extensions/villagesql-uuid/snap/snapcraft.yaml` (`version`,
@@ -81,7 +89,7 @@ curl -fsSL https://api.github.com/repos/villagesql/villagesql-server/releases/ta
 git switch 9.7/edge && git merge --no-edit 8.4/edge
 # edit snap/snapcraft.yaml: version (9.7.<p>-<vsql>) and source-tag only
 git diff 8.4/edge --stat          # must list only the branch-specific files
-snapcraft pack && snapcraft test  # full suite; refresh must take the rollback path here
+snapcraft pack && snapcraft test  # full suite; refresh takes the rollback path from the 0.0.6 builds under spread/
 mv villagesql_*.snap dist/ && git commit -am "..."
 ```
 
@@ -93,7 +101,7 @@ the Percona build flags and packages against upstream's `build_ci.sh` and
 
 | Artifact | Channels |
 | --- | --- |
-| `villagesql_8.4.*` | `8.4/edge`, and `latest/edge` while `latest` mirrors `8.4` |
+| `villagesql_8.4.*` | `8.4/edge` |
 | `villagesql_9.7.*` | `9.7/edge` |
 | `villagesql_8.4.*+percona` | `percona-8.4/edge` |
 | `villagesql-hello_*`, `villagesql-uuid_*` | `latest/edge`, in the same session as the servers |
