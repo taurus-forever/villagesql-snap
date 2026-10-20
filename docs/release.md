@@ -121,6 +121,19 @@ the Percona build flags and packages against upstream's `build_ci.sh` and
 | `villagesql_8.4.*+percona` | `percona-8.4/edge` |
 | `villagesql-<name>_*` (every provider) | `latest/edge`, by `release-extensions.yaml` or by hand in the same session as the servers |
 
+CI builds amd64 and arm64 only: `build_snap.yaml` has no riscv64 runner.
+riscv64 is built and tested by hand on the SpacemiT K3 (RVA23). The free
+RISE RISC-V Runners (`runs-on: ubuntu-24.04-riscv`,
+https://riscv-runners.riseproject.dev/) cannot build it: Ubuntu 25.10+
+riscv64 targets the RVA23 profile and their Scaleway EM-RV1 nodes are
+RVA20, so an Ubuntu 26.04 container (the core26 build base) dies with
+SIGILL on its first binary (tried 2026-10-20, run 39497540852). A ready
+`build-riscv64` job (snapcraft from pip in destructive mode inside an
+`ubuntu:26.04` container, artifact `packed-snap-.--platform-riscv64` so
+`release.yaml` uploads it) is in git history (commit 76a18db); revive it
+with `runs-on: ubuntu-26.04-riscv` once RISE routes that label to RVA23
+hardware.
+
 The store's self-serve track guardrail accepts only `major.minor` names;
 other tracks go through a forum store-request (`percona-8.4` has releases since
 2026-10-20).
