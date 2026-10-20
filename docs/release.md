@@ -63,7 +63,10 @@ curl -fsSL https://api.github.com/repos/villagesql/villagesql-server/releases/ta
    exist yet (a new codebase). It works out the expected outcome from the
    codebase the previous release recorded: same codebase, the refresh must
    succeed; another one (the 0.0.6 builds on `9.7/edge`), the guard must
-   roll it back.
+   roll it back. The providers come from `spread/` too, else from the
+   store; when their content label differs from the previous release's
+   (0.0.6 from the store, as on arm64 while `8.4/edge` has no 0.0.7 there),
+   they are connected after the refresh instead of before.
 2. `snap/snapcraft.yaml`: `version`, `source-tag`, summary/description if
    wording changes. `docs/commands.md`: the `SELECT VERSION()` sample.
 3. Extensions: every `extensions/villagesql-*/snap/snapcraft.yaml`:
