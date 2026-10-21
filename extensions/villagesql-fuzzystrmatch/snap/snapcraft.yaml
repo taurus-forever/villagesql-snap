@@ -1,0 +1,62 @@
+name: villagesql-fuzzystrmatch
+base: core26
+version: '0.0.1'
+summary: vsql_fuzzystrmatch extension for the VillageSQL snap
+description: |
+  Packages the upstream vsql-fuzzystrmatch extension (Soundex, Levenshtein,
+  Metaphone and Double Metaphone matching (PostgreSQL fuzzystrmatch port))
+  as a separate snap that plugs into the villagesql snap through the content
+  interface:
+
+    sudo snap install villagesql-fuzzystrmatch
+    sudo snap connect villagesql:extensions \
+      villagesql-fuzzystrmatch:extensions
+    sudo snap restart villagesql
+    sudo villagesql.mysql -uroot -e "INSTALL EXTENSION vsql_fuzzystrmatch;"
+    sudo villagesql.mysql -uroot \
+      -e "SELECT vsql_fuzzystrmatch.soundex('Robert');"
+grade: devel
+confinement: strict
+
+platforms:
+  amd64:
+  arm64:
+  riscv64:
+
+slots:
+  extensions:
+    interface: content
+    content: villagesql-extensions
+    source:
+      read:
+        - $SNAP/fuzzystrmatch
+
+parts:
+  fuzzystrmatch:
+    plugin: nil
+    source: https://github.com/villagesql/vsql-fuzzystrmatch.git
+    source-tag: '0.0.1'
+    source-depth: 1
+    build-packages:
+      - build-essential
+      - ca-certificates
+      - cmake
+      - curl
+    override-build: |
+      set -e
+      SDK_VERSION=0.0.7
+      SDK_URL="https://github.com/villagesql/villagesql-server/releases"
+      SDK_URL="$SDK_URL/download/release%2F${SDK_VERSION}"
+      SDK_URL="$SDK_URL/villagesql-extension-sdk-${SDK_VERSION}.tar.gz"
+      rm -rf sdk build && mkdir -p sdk
+      curl -fsSL "$SDK_URL" | tar xz -C sdk --strip-components=1
+      cmake -S . -B build -DCMAKE_BUILD_TYPE=Release \
+        -DVillageSQL_SDK_DIR="$PWD/sdk"
+      cmake --build build
+      BUNDLE=vsql_fuzzystrmatch
+      tar -tf "build/$BUNDLE.veb"
+      # Layout consumed by the villagesql snap, see docs/extensions.md.
+      OUT="$CRAFT_PART_INSTALL/fuzzystrmatch"
+      install -Dm644 "build/$BUNDLE.veb" "$OUT/veb/$BUNDLE.veb"
+      printf 'VERSION=%s\n' "$CRAFT_PROJECT_VERSION" > "$OUT/manifest"
+      install -Dm644 LICENSE "$OUT/licenses/LICENSE-$CRAFT_PROJECT_NAME"
