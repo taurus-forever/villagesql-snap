@@ -21,7 +21,7 @@ description: |
   villagesql snap's network access.
 
   The build clones and compiles DuckDB (v1.5.5, httpfs and json readers)
-  itself, which takes about an hour on 12 cores.
+  itself: about 30 minutes on 12 cores (2026-10-21, shared with another build).
 grade: devel
 confinement: strict
 
