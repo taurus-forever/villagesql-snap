@@ -25,9 +25,10 @@ the 0.0.6 to 0.0.7 update (2026-10-16); the design is in
   `$SNAP/codebase`, stamped at build time from upstream's `VSQL_VERSION`
   (`VSQL_CODE_BASE=`), with `$SNAP_COMMON/.snap-data-codebase`. Nothing in
   it is version-specific.
-- Extension snaps (`extensions/villagesql-hello`, `extensions/villagesql-uuid`)
-  are codebase-independent (one SDK tarball per release, protocol-versioned
-  ABI) and live on `latest` only. Old bundles keep loading on newer servers.
+- Extension snaps (`extensions/villagesql-*`, one per catalogue entry, see
+  `extensions/README.md`) are codebase-independent (one SDK tarball per
+  release, protocol-versioned ABI) and live on `latest` only. Old bundles
+  keep loading on newer servers.
 - Publishing is manual: build, test locally, upload per track. The release
   workflow is `workflow_dispatch` only and derives the track from the
   branch name.
@@ -68,11 +69,22 @@ curl -fsSL https://api.github.com/repos/villagesql/villagesql-server/releases/ta
    they are connected after the refresh instead of before.
 2. `snap/snapcraft.yaml`: `version`, `source-tag`, summary/description if
    wording changes. `docs/commands.md`: the `SELECT VERSION()` sample.
-3. Extensions: `extensions/villagesql-uuid/snap/snapcraft.yaml` (`version`,
-   `source-tag`, `SDK_VERSION`); `villagesql-hello` only if the SDK
-   compatibility story changes. Update the version greps in
-   `spread/tests/extension_snap_hello` and `extension_snap_uuid`.
-   Docs: `docs/extensions.md` (SDK tarball name), `extensions/README.md`.
+3. Extensions: every `extensions/villagesql-*/snap/snapcraft.yaml`:
+   `SDK_VERSION` (the C++ ones), and `version` + `source-tag` where upstream
+   tagged a new release (`git ls-remote --tags https://github.com/<owner>/<repo>.git`
+   per repo; the untagged community repos keep their `source-commit` unless
+   there is a reason to move it). `villagesql-hello` only if the SDK
+   compatibility story changes. Update the version columns in
+   `spread/tests/extension_snaps_all/task.yaml` (`PROVIDERS`) and the greps
+   in `extension_snap_hello` / `extension_snap_uuid`, and the pins in
+   `extensions/README.md`. Docs: `docs/extensions.md` (SDK tarball name).
+   The release workflow for providers is `release-extensions.yaml`
+   (`workflow_dispatch`, `all` or a list of snap names), track `latest`.
+   **Order:** release the servers of all three tracks first, then the
+   providers. `villagesql-http`, `-oauth2`, `-stat-ch` and `-duckdb` link
+   against libcurl/lz4/zstd, which the server snap ships only since
+   2026-10-21; on an older server revision `INSTALL EXTENSION` fails with
+   a dlopen error.
 4. Build and test (times are for a 12-core host):
 
    ```shell
@@ -107,7 +119,7 @@ the Percona build flags and packages against upstream's `build_ci.sh` and
 | `villagesql_8.4.*` | `8.4/edge` |
 | `villagesql_9.7.*` | `9.7/edge` |
 | `villagesql_8.4.*+percona` | `percona-8.4/edge` |
-| `villagesql-hello_*`, `villagesql-uuid_*` | `latest/edge`, in the same session as the servers |
+| `villagesql-<name>_*` (every provider) | `latest/edge`, by `release-extensions.yaml` or by hand in the same session as the servers |
 
 CI builds amd64 and arm64 only: `build_snap.yaml` has no riscv64 runner.
 riscv64 is built and tested by hand on the SpacemiT K3 (RVA23). The free

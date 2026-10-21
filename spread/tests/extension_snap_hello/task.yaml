@@ -41,9 +41,10 @@ execute: |
   snap disconnect villagesql:extensions villagesql-hello:extensions
   snap run --shell villagesql.mysql -c 'test ! -e "$SNAP/extensions/hello"'
   restart
-  ! grep -q vsql_hello "$INV"
-  ! test -e /var/snap/villagesql/common/veb/vsql_hello.veb
-  ! $MYSQL -e "INSTALL EXTENSION vsql_hello;" 2>/dev/null
+  # (`! cmd` does not stop a `set -e` script, hence the explicit checks)
+  if grep -q vsql_hello "$INV"; then echo "ERROR: vsql_hello still in INVENTORY" >&2; exit 1; fi
+  if test -e /var/snap/villagesql/common/veb/vsql_hello.veb; then echo "ERROR: stale bundle" >&2; exit 1; fi
+  if $MYSQL -e "INSTALL EXTENSION vsql_hello;" 2>/dev/null; then echo "ERROR: installed a gone bundle" >&2; exit 1; fi
 
   echo "Ensure no AppArmor denials from the daemon..."
   if journalctl -k | grep 'apparmor="DENIED"' | grep 'profile="snap.villagesql.villagesql"'; then

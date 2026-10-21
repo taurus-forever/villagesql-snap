@@ -1,0 +1,82 @@
+# Copyright 2026 Canonical Ltd.
+# See LICENSE file for licensing details.
+name: Release extension snaps to Snap Store
+
+# Publishes the provider snaps under extensions/ to latest/edge (they are
+# codebase-independent, see docs/extensions.md). Dispatch it from 8.4/edge,
+# the branch that carries the shared work. The maintainer registers each
+# name once (`snapcraft register villagesql-<name>`) and the store token
+# SNAP_STORE_TOKEN_EDGE must cover them. Release the servers of all three
+# tracks first: villagesql-http, -oauth2, -stat-ch and -duckdb only load on
+# a server that ships libcurl/lz4/zstd (built on or after 2026-10-21).
+on:
+  workflow_dispatch:
+    inputs:
+      extensions:
+        description: '`all`, or a space-separated list of snap names (villagesql-crypto villagesql-uuid ...)'
+        type: string
+        default: all
+        required: true
+
+jobs:
+  plan:
+    name: Resolve the requested names
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      extensions: ${{ steps.plan.outputs.extensions }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Resolve `all` or the given names against extensions/
+        id: plan
+        env:
+          REQUESTED: ${{ inputs.extensions }}
+        run: |
+          if [ "$REQUESTED" = all ]; then
+            names="$(ls -d extensions/*/ | xargs -n1 basename)"
+          else
+            names="$REQUESTED"
+            for name in $names; do
+              if [ ! -d "extensions/$name" ]; then
+                echo "::error::'$name' is not a directory under extensions/"
+                exit 1
+              fi
+            done
+          fi
+          list="$(echo "$names" | tr ' ' '\n' | jq -R . | jq -sc .)"
+          echo "$list"
+          echo "extensions=$list" >> "$GITHUB_OUTPUT"
+    permissions: {}
+    cache-mode: none
+
+  ci-tests:
+    name: Tests
+    needs:
+      - plan
+    uses: $/.github/workflows/ci.yaml
+    permissions:
+      contents: read
+    cache-mode: none
+
+  release:
+    name: Release ${{ matrix.extension }}
+    needs:
+      - plan
+      - ci-tests
+    strategy:
+      fail-fast: false
+      matrix:
+        extension: ${{ fromJSON(needs.plan.outputs.extensions) }}
+    uses: canonical/data-platform-workflows/.github/workflows/release_snap_edge.yaml@v53.0.0
+    with:
+      track: latest
+      artifact-prefix: ${{ needs.ci-tests.outputs.extension-artifact-prefix }}
+      path-to-snap-project-directory: extensions/${{ matrix.extension }}
+    secrets:
+      snap-store-token: ${{ secrets.SNAP_STORE_TOKEN_EDGE }}
+    permissions:
+      contents: write  # Needed to create git tags
+    cache-mode: none

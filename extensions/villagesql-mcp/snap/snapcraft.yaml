@@ -1,0 +1,65 @@
+name: villagesql-mcp
+base: core26
+version: '0.0.7'
+summary: vsql_mcp extension for the VillageSQL snap (content interface)
+description: |
+  Packages the upstream vsql-mcp extension (a Model Context Protocol (MCP)
+  server that exposes a database to AI agents) as a separate snap that plugs
+  into the villagesql snap through the content interface:
+
+    sudo snap install villagesql-mcp
+    sudo snap connect villagesql:extensions villagesql-mcp:extensions
+    sudo snap set villagesql vsql-allow-preview-extensions=ON
+    sudo snap restart villagesql
+    sudo villagesql.mysql -uroot -e "INSTALL EXTENSION vsql_mcp;"
+    sudo villagesql.mysql -uroot \
+      -e "SELECT @@vsql_mcp.vsql_mcp_enabled;"
+
+  Preview extension: it uses VEF APIs that may change between VillageSQL
+  releases and only loads when the server runs with
+  vsql_allow_preview_extensions=ON.
+
+  Written in Rust against the VillageSQL Rust SDK (crates.io) and packaged
+  with cargo-vsql; no server build is needed.
+grade: devel
+confinement: strict
+
+platforms:
+  amd64:
+  arm64:
+  riscv64:
+
+slots:
+  extensions:
+    interface: content
+    content: villagesql-extensions
+    source:
+      read:
+        - $SNAP/mcp
+
+parts:
+  mcp:
+    plugin: nil
+    source: https://github.com/villagesql/vsql-mcp.git
+    source-tag: '0.0.7'
+    source-depth: 1
+    build-snaps:
+      - rustup
+    build-packages:
+      - build-essential
+      - ca-certificates
+      - libssl-dev
+      - pkg-config
+    override-build: |
+      set -e
+      rustup default stable
+      cargo install cargo-vsql --locked --version 0.0.6
+      # Release build; writes dist/vsql_mcp.veb (manifest.json plus
+      # lib/vsql_mcp.so) without a server checkout.
+      cargo vsql package
+      tar -tf dist/vsql_mcp.veb
+      # Layout consumed by the villagesql snap, see docs/extensions.md.
+      OUT="$CRAFT_PART_INSTALL/mcp"
+      install -Dm644 dist/vsql_mcp.veb "$OUT/veb/vsql_mcp.veb"
+      printf 'VERSION=%s\n' "$CRAFT_PROJECT_VERSION" > "$OUT/manifest"
+      install -Dm644 LICENSE "$OUT/licenses/LICENSE-villagesql-mcp"
