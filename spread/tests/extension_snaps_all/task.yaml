@@ -1,0 +1,151 @@
+summary: Every provider snap in extensions/ loads, installs and answers a query in one server
+
+# One server, every provider connected at once: the catalogue as a user gets
+# it with `snap install villagesql-<name>` for each. hello and uuid have their
+# own walkthrough tests and are left out here. The packed snaps are expected
+# next to each provider's snap/ directory (snapcraft pack there, or the CI
+# artifacts); only villagesql-duckdb may be missing (its build takes hours).
+
+execute: |
+  INV=/var/snap/villagesql/common/veb/INVENTORY
+  MYSQL="villagesql.mysql -uroot -N"
+  wait_ready() {
+    timeout 120 /bin/bash -c \
+      "while ! villagesql.mysqladmin -uroot ping >/dev/null 2>&1; do echo Waiting for villagesql...; sleep 1; done"
+  }
+  restart() { snap restart villagesql; wait_ready; }
+  # dir|bundle|version|preview  (version = the provider's manifest VERSION=)
+  PROVIDERS="
+  address-standardizer|vsql_address_standardizer|0.0.1+gitebe73e3|no
+  ai|vsql_ai|0.0.7|no
+  boolean|vsql_boolean|0.0.3|no
+  crypto|vsql_crypto|0.0.7|no
+  cube|vsql_cube|0.0.6|no
+  currency|vsql_currency|0.0.1|no
+  duckdb|vsql_duckdb|0.0.3|yes
+  fuzzystrmatch|vsql_fuzzystrmatch|0.0.1|no
+  http|vsql_http|0.0.3|no
+  luhn|vsql_luhn|0.0.1+gitde5afe2|no
+  mcp|vsql_mcp|0.0.7|yes
+  nanoid|vsql_nanoid|0.0.1+git9b03e82|no
+  network-address|vsql_network_address|0.0.7|no
+  oauth2|vsql_oauth2|0.0.4|yes
+  pgjwt|vsql_pgjwt|0.0.1+gitfd2e02d|no
+  rest|vsql_rest|0.0.10|yes
+  slugify|vsql_slugify|0.0.1+git0799b26|no
+  stat-ch|vsql_stat_ch|0.0.3|yes
+  statistics|vsql_statistics|0.5.0|no
+  trgm|vsql_trgm|0.0.4|no
+  "
+  rows() { echo "$PROVIDERS" | sed 's/^ *//' | grep -v '^$'; }
+
+  echo "Installing and connecting every provider snap..."
+  INSTALLED=""
+  for row in $(rows); do
+    IFS='|' read -r dir bundle ver preview <<< "$row"
+    snapfile="$(ls "${PROJECT_PATH}/extensions/villagesql-$dir/villagesql-${dir}_"*.snap 2>/dev/null | head -1)"
+    if [ -z "$snapfile" ]; then
+      if [ "$dir" = duckdb ]; then echo "SKIP duckdb (no snap packed)"; continue; fi
+      echo "ERROR: need extensions/villagesql-$dir/*.snap (snapcraft pack there)" >&2
+      exit 1
+    fi
+    snap install "$snapfile" --dangerous
+    snap connect villagesql:extensions "villagesql-$dir:extensions"
+    INSTALLED="$INSTALLED $dir"
+  done
+  snap connections villagesql | grep -c 'villagesql-.*:extensions'
+
+  echo "The server starts with every provider connected..."
+  restart
+  cat "$INV"
+  # every bundle came from its own provider, none was shadowed
+  ! grep -q ignored "$INV"
+
+  echo "A preview bundle refuses to install while the flag is off..."
+  if $MYSQL -e "INSTALL EXTENSION vsql_rest;" 2>/tmp/preview.err; then
+    echo "ERROR: vsql_rest installed without vsql_allow_preview_extensions" >&2
+    exit 1
+  fi
+  cat /tmp/preview.err
+
+  echo "Enabling preview extensions (configure hook restarts the server)..."
+  snap set villagesql vsql-allow-preview-extensions=ON
+  wait_ready
+  $MYSQL -e "SELECT @@vsql_allow_preview_extensions;" | grep -x 1
+
+  # in_inventory <bundle> <dir> <version>
+  in_inventory() {
+    awk -F'\t' -v b="$1.veb" -v o="snap:$2" -v v="$3" '$1==b && $2==o && $3==v {f=1} END {exit !f}' "$INV"
+  }
+  # smoke <bundle>: one query per bundle, from the upstream README
+  smoke() {
+    case "$1" in
+      vsql_address_standardizer)
+        $MYSQL -e "SELECT address_standardize('123 north main st, springfield new york 62704');" | grep -i 'SPRINGFIELD NY' ;;
+      vsql_ai)  # every function needs an API key or a local model
+        $MYSQL -e "SELECT EXTENSION_NAME FROM INFORMATION_SCHEMA.EXTENSIONS;" | grep -x vsql_ai ;;
+      vsql_boolean)
+        $MYSQL -e "CREATE DATABASE IF NOT EXISTS t; CREATE TABLE t.b (e STRICTBOOL); INSERT INTO t.b VALUES ('true'); SELECT boolean_to_int(e) FROM t.b; DROP TABLE t.b;" | grep -x 1 ;;
+      vsql_crypto)
+        $MYSQL -e "SELECT HEX(digest('abc', 'sha256'));" | grep -x BA7816BF8F01CFEA414140DE5DAE2223B00361A396177A9CB410FF61F20015AD ;;
+      vsql_cube)
+        $MYSQL -e "SELECT cube_point(5.0);" | grep -x '(5)' ;;
+      vsql_currency)
+        $MYSQL -e "SELECT vsql_currency.currency_count();" | grep -x 164 ;;
+      vsql_duckdb)
+        $MYSQL -e "SELECT duckdb_status();" | grep -F 'v1.5.5' ;;
+      vsql_fuzzystrmatch)
+        $MYSQL -e "SELECT vsql_fuzzystrmatch.soundex('Robert');" | grep -x R163 ;;
+      vsql_http)
+        $MYSQL -e "SELECT vsql_http.url_encode('a b');" | grep -x 'a%20b' ;;
+      vsql_luhn)
+        $MYSQL -e "SELECT vsql_luhn.luhn_valid('4539148803436467');" | grep -x 1 ;;
+      vsql_mcp)
+        $MYSQL -e "SELECT @@vsql_mcp.vsql_mcp_enabled;" | grep -x 0 ;;
+      vsql_nanoid)
+        $MYSQL -e "SELECT LENGTH(vsql_nanoid.nanoid());" | grep -x 21 ;;
+      vsql_network_address)
+        $MYSQL -e "CREATE DATABASE IF NOT EXISTS t; CREATE TABLE t.h (ip INET); INSERT INTO t.h VALUES (inet_from_string('10.1.2.3')); SELECT inet_to_string(ip) FROM t.h; DROP TABLE t.h;" | grep -x 10.1.2.3 ;;
+      vsql_oauth2)
+        $MYSQL -e "SELECT @@vsql_oauth2.jwks_refresh_interval;" | grep -x 3600 ;;
+      vsql_pgjwt)
+        $MYSQL -e "SELECT JSON_VALUE(vsql_pgjwt.jwt_decode(vsql_pgjwt.jwt_sign('{\"sub\":\"u\"}', 's', 'HS256')), '$.payload.sub');" | grep -x u ;;
+      vsql_rest)
+        $MYSQL -e "SELECT @@vsql_rest.port;" | grep -x 3000 ;;
+      vsql_slugify)
+        $MYSQL -e "SELECT vsql_slugify.slugify('Hello, World!');" | grep -x hello-world ;;
+      vsql_stat_ch)
+        $MYSQL -e "SELECT @@vsql_stat_ch.clickhouse_port;" | grep -x 9000 ;;
+      vsql_statistics)
+        $MYSQL -e "SELECT CAST(STATS_IQR(v) AS CHAR(300)) FROM (SELECT 1.0 v UNION ALL SELECT 2.0 UNION ALL SELECT 3.0 UNION ALL SELECT 4.0) x;" | grep -F '{' ;;
+      vsql_trgm)
+        $MYSQL -e "SELECT vsql_trgm.trgm_similar('cat', 'car');" | grep -x 1 ;;
+      *) echo "no smoke query for $1" >&2; return 1 ;;
+    esac
+  }
+
+  for row in $(rows); do
+    IFS='|' read -r dir bundle ver preview <<< "$row"
+    case " $INSTALLED " in *" $dir "*) ;; *) continue ;; esac
+    echo "=== $bundle ($ver, preview=$preview)"
+    in_inventory "$bundle" "$dir" "$ver"
+    villagesql.extensions list | grep -E "^$bundle\s+\S+\s+snap:$dir\s+no$"
+    $MYSQL -e "INSTALL EXTENSION $bundle;"
+    villagesql.extensions list | grep -E "^$bundle\s+\S+\s+snap:$dir\s+yes$"
+    smoke "$bundle"
+    $MYSQL -e "UNINSTALL EXTENSION $bundle;"
+  done
+
+  echo "Ensure no AppArmor denials from the daemon..."
+  if journalctl -k | grep 'apparmor="DENIED"' | grep 'profile="snap.villagesql.villagesql"'; then
+    echo "ERROR: AppArmor denials produced by the daemon (see above)" >&2
+    exit 1
+  fi
+  echo "All provider snaps test completed."
+
+restore: |
+  for s in $(snap list 2>/dev/null | awk '/^villagesql-/ {print $1}'); do
+    snap remove "$s" 2>/dev/null || true
+  done
+  snap unset villagesql vsql-allow-preview-extensions 2>/dev/null || true
+  rm -f /tmp/preview.err
