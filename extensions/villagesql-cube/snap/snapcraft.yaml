@@ -13,7 +13,7 @@ description: |
     sudo snap restart villagesql
     sudo villagesql.mysql -uroot -e "INSTALL EXTENSION vsql_cube;"
     sudo villagesql.mysql -uroot \
-      -e "SELECT cube_to_string(cube_point(5.0));"
+      -e "SELECT cube_point(5.0);"
 grade: devel
 confinement: strict
 

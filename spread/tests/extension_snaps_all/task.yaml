@@ -59,7 +59,10 @@ execute: |
   restart
   cat "$INV"
   # every bundle came from its own provider, none was shadowed
-  ! grep -q ignored "$INV"
+  if grep -q ignored "$INV"; then
+    echo "ERROR: a bundle was shadowed by another provider (see INVENTORY above)" >&2
+    exit 1
+  fi
 
   echo "A preview bundle refuses to install while the flag is off..."
   if $MYSQL -e "INSTALL EXTENSION vsql_rest;" 2>/tmp/preview.err; then
@@ -67,6 +70,8 @@ execute: |
     exit 1
   fi
   cat /tmp/preview.err
+  # mysqld's refusal, not a crashed connection
+  grep -q "requires preview capabilities but vsql_allow_preview_extensions is OFF" /tmp/preview.err
 
   echo "Enabling preview extensions (configure hook restarts the server)..."
   snap set villagesql vsql-allow-preview-extensions=ON

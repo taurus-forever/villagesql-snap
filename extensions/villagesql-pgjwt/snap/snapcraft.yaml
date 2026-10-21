@@ -12,7 +12,7 @@ description: |
     sudo snap restart villagesql
     sudo villagesql.mysql -uroot -e "INSTALL EXTENSION vsql_pgjwt;"
     sudo villagesql.mysql -uroot \
-      -e "SELECT vsql_pgjwt.jwt_sign('{"sub":"u"}', 's', 'HS256');"
+      -e "SELECT vsql_pgjwt.jwt_sign('{\"sub\":\"u\"}', 's', 'HS256');"
 grade: devel
 confinement: strict
 

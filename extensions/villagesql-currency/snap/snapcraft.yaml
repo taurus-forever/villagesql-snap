@@ -11,8 +11,8 @@ description: |
     sudo snap connect villagesql:extensions villagesql-currency:extensions
     sudo snap restart villagesql
     sudo villagesql.mysql -uroot -e "INSTALL EXTENSION vsql_currency;"
-  sudo villagesql.mysql -uroot \
-    -e "SELECT vsql_currency.currency_count();"
+    sudo villagesql.mysql -uroot \
+      -e "SELECT vsql_currency.currency_count();"
 
   Written in Rust against the VillageSQL Rust SDK (crates.io) and packaged
   with cargo-vsql; no server build is needed.

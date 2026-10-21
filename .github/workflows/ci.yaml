@@ -130,19 +130,16 @@ jobs:
           pattern: ${{ needs.build.outputs.artifact-prefix }}-*-${{ matrix.platform.arch }}
           merge-multiple: true
       - name: Download extension snap(s)
+        # build_snap.yaml uploads `extensions/<name>/*.snap` plus `.empty` at
+        # the repository root, so the artifact keeps that layout and a merged
+        # download lands every provider snap in its own extensions/<name>/,
+        # where the extension_snap* spread tests expect it.
         uses: actions/download-artifact@v8
         with:
           pattern: packed-extension-*--platform-${{ matrix.platform.arch }}
-          path: extension-artifacts
-      - name: Place extension snaps next to their projects
-        # The extension_snap* spread tests pick them up from extensions/<name>/
-        run: |
-          for f in extension-artifacts/*/*.snap; do
-            name="$(basename "$f")"
-            name="${name%%_*}"
-            mv "$f" "extensions/$name/"
-          done
-          ls -l extensions/*/*.snap
+          merge-multiple: true
+      - name: Extension snaps are next to their projects
+        run: ls -l extensions/*/*.snap
       - name: Add pipx to PATH
         run: |
           echo "${HOME}/.local/bin" >> "${GITHUB_PATH}"

@@ -20,6 +20,10 @@ description: |
   vsql_allow_preview_extensions=ON. Queries over https:// or s3:// need the
   villagesql snap's network access.
 
+  Needs a villagesql snap built from the repository on or after 2026-10-21:
+  the 0.0.7 store revisions published before that do not ship libcurl (see
+  docs/extensions.md) and cannot load this bundle.
+
   The build clones and compiles DuckDB (v1.5.5, httpfs and json readers)
   itself: about 30 minutes on 12 cores (2026-10-21, shared with another build).
 grade: devel

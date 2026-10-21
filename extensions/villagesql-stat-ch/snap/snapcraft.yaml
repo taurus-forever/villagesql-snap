@@ -18,6 +18,11 @@ description: |
   Preview extension: it uses VEF APIs that may change between VillageSQL
   releases and only loads when the server runs with
   vsql_allow_preview_extensions=ON.
+
+  Needs a villagesql snap built from the repository on or after 2026-10-21:
+  the 0.0.7 store revisions published before that do not ship the shared
+  libraries this bundle links against (see docs/extensions.md) and cannot load
+  it.
 grade: devel
 confinement: strict
 

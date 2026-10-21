@@ -6,7 +6,9 @@ name: Release extension snaps to Snap Store
 # codebase-independent, see docs/extensions.md). Dispatch it from 8.4/edge,
 # the branch that carries the shared work. The maintainer registers each
 # name once (`snapcraft register villagesql-<name>`) and the store token
-# SNAP_STORE_TOKEN_EDGE must cover them.
+# SNAP_STORE_TOKEN_EDGE must cover them. Release the servers of all three
+# tracks first: villagesql-http, -oauth2, -stat-ch and -duckdb only load on
+# a server that ships libcurl/lz4/zstd (built on or after 2026-10-21).
 on:
   workflow_dispatch:
     inputs:

@@ -12,8 +12,8 @@ description: |
     sudo snap set villagesql vsql-allow-preview-extensions=ON
     sudo snap restart villagesql
     sudo villagesql.mysql -uroot -e "INSTALL EXTENSION vsql_mcp;"
-  sudo villagesql.mysql -uroot \
-    -e "SELECT @@vsql_mcp.vsql_mcp_enabled;"
+    sudo villagesql.mysql -uroot \
+      -e "SELECT @@vsql_mcp.vsql_mcp_enabled;"
 
   Preview extension: it uses VEF APIs that may change between VillageSQL
   releases and only loads when the server runs with

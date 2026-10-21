@@ -77,6 +77,11 @@ curl -fsSL https://api.github.com/repos/villagesql/villagesql-server/releases/ta
    `extensions/README.md`. Docs: `docs/extensions.md` (SDK tarball name).
    The release workflow for providers is `release-extensions.yaml`
    (`workflow_dispatch`, `all` or a list of snap names), track `latest`.
+   **Order:** release the servers of all three tracks first, then the
+   providers. `villagesql-http`, `-oauth2`, `-stat-ch` and `-duckdb` link
+   against libcurl/lz4/zstd, which the server snap ships only since
+   2026-10-21; on an older server revision `INSTALL EXTENSION` fails with
+   a dlopen error.
 4. Build and test (times are for a 12-core host):
 
    ```shell
