@@ -1,17 +1,17 @@
 name: villagesql-network-address
 base: core26
 version: '0.0.7'
-summary: vsql_network_address extension for the VillageSQL snap (content interface)
+summary: vsql_network_address extension for the VillageSQL snap
 description: |
   Packages the upstream vsql-network-address extension (INET, CIDR, MACADDR
   and MACADDR8 column types with their functions) as a separate snap that
   plugs into the villagesql snap through the content interface:
 
     sudo snap install villagesql-network-address
-    sudo snap connect villagesql:extensions villagesql-network-address:extensions
+    sudo snap connect villagesql:extensions \
+      villagesql-network-address:extensions
     sudo snap restart villagesql
-    sudo villagesql.mysql -uroot \
-      -e "INSTALL EXTENSION vsql_network_address;"
+    sudo villagesql.mysql -uroot -e "INSTALL EXTENSION vsql_network_address;"
 grade: devel
 confinement: strict
 
@@ -51,9 +51,10 @@ parts:
       cmake -S . -B build -DCMAKE_BUILD_TYPE=Release \
         -DVillageSQL_SDK_DIR="$PWD/sdk"
       cmake --build build
-      tar -tf build/vsql_network_address.veb
+      BUNDLE=vsql_network_address
+      tar -tf "build/$BUNDLE.veb"
       # Layout consumed by the villagesql snap, see docs/extensions.md.
       OUT="$CRAFT_PART_INSTALL/network-address"
-      install -Dm644 build/vsql_network_address.veb "$OUT/veb/vsql_network_address.veb"
+      install -Dm644 "build/$BUNDLE.veb" "$OUT/veb/$BUNDLE.veb"
       printf 'VERSION=%s\n' "$CRAFT_PROJECT_VERSION" > "$OUT/manifest"
-      install -Dm644 LICENSE "$OUT/licenses/LICENSE-villagesql-network-address"
+      install -Dm644 LICENSE "$OUT/licenses/LICENSE-$CRAFT_PROJECT_NAME"

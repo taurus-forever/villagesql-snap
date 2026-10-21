@@ -11,8 +11,9 @@ description: |
     sudo snap install villagesql-http
     sudo snap connect villagesql:extensions villagesql-http:extensions
     sudo snap restart villagesql
+    sudo villagesql.mysql -uroot -e "INSTALL EXTENSION vsql_http;"
     sudo villagesql.mysql -uroot \
-      -e "INSTALL EXTENSION vsql_http; SELECT vsql_http.url_encode('a b');"
+      -e "SELECT vsql_http.url_encode('a b');"
 grade: devel
 confinement: strict
 
@@ -52,10 +53,11 @@ parts:
       cmake -S . -B build -DCMAKE_BUILD_TYPE=Release \
         -DVillageSQL_SDK_DIR="$PWD/sdk"
       cmake --build build
-      tar -tf build/vsql_http.veb
+      BUNDLE=vsql_http
+      tar -tf "build/$BUNDLE.veb"
       # Layout consumed by the villagesql snap, see docs/extensions.md.
       # libcurl is provided by the villagesql snap that loads the bundle.
       OUT="$CRAFT_PART_INSTALL/http"
-      install -Dm644 build/vsql_http.veb "$OUT/veb/vsql_http.veb"
+      install -Dm644 "build/$BUNDLE.veb" "$OUT/veb/$BUNDLE.veb"
       printf 'VERSION=%s\n' "$CRAFT_PROJECT_VERSION" > "$OUT/manifest"
-      install -Dm644 LICENSE "$OUT/licenses/LICENSE-villagesql-http"
+      install -Dm644 LICENSE "$OUT/licenses/LICENSE-$CRAFT_PROJECT_NAME"

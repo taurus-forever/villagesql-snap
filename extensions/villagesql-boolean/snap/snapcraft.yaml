@@ -10,8 +10,7 @@ description: |
     sudo snap install villagesql-boolean
     sudo snap connect villagesql:extensions villagesql-boolean:extensions
     sudo snap restart villagesql
-    sudo villagesql.mysql -uroot \
-      -e "INSTALL EXTENSION vsql_boolean;"
+    sudo villagesql.mysql -uroot -e "INSTALL EXTENSION vsql_boolean;"
 grade: devel
 confinement: strict
 
@@ -50,9 +49,10 @@ parts:
       cmake -S . -B build -DCMAKE_BUILD_TYPE=Release \
         -DVillageSQL_SDK_DIR="$PWD/sdk"
       cmake --build build
-      tar -tf build/vsql_boolean.veb
+      BUNDLE=vsql_boolean
+      tar -tf "build/$BUNDLE.veb"
       # Layout consumed by the villagesql snap, see docs/extensions.md.
       OUT="$CRAFT_PART_INSTALL/boolean"
-      install -Dm644 build/vsql_boolean.veb "$OUT/veb/vsql_boolean.veb"
+      install -Dm644 "build/$BUNDLE.veb" "$OUT/veb/$BUNDLE.veb"
       printf 'VERSION=%s\n' "$CRAFT_PROJECT_VERSION" > "$OUT/manifest"
-      install -Dm644 LICENSE "$OUT/licenses/LICENSE-villagesql-boolean"
+      install -Dm644 LICENSE "$OUT/licenses/LICENSE-$CRAFT_PROJECT_NAME"

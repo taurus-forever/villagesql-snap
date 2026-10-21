@@ -11,8 +11,9 @@ description: |
     sudo snap connect villagesql:extensions villagesql-stat-ch:extensions
     sudo snap set villagesql vsql-allow-preview-extensions=ON
     sudo snap restart villagesql
+    sudo villagesql.mysql -uroot -e "INSTALL EXTENSION vsql_stat_ch;"
     sudo villagesql.mysql -uroot \
-      -e "INSTALL EXTENSION vsql_stat_ch; SELECT @@vsql_stat_ch.clickhouse_port;"
+      -e "SELECT @@vsql_stat_ch.clickhouse_port;"
 
   Preview extension: it uses VEF APIs that may change between VillageSQL
   releases and only loads when the server runs with
@@ -62,10 +63,12 @@ parts:
       cmake -S . -B build -DCMAKE_BUILD_TYPE=Release \
         -DVillageSQL_SDK_DIR="$PWD/sdk"
       cmake --build build
-      tar -tf build/vsql_stat_ch.veb
+      BUNDLE=vsql_stat_ch
+      tar -tf "build/$BUNDLE.veb"
       # Layout consumed by the villagesql snap, see docs/extensions.md.
-      # libcurl, lz4 and zstd are provided by the villagesql snap that loads the bundle.
+      # libcurl, lz4 and zstd are provided by the villagesql snap that loads
+      # the bundle.
       OUT="$CRAFT_PART_INSTALL/stat-ch"
-      install -Dm644 build/vsql_stat_ch.veb "$OUT/veb/vsql_stat_ch.veb"
+      install -Dm644 "build/$BUNDLE.veb" "$OUT/veb/$BUNDLE.veb"
       printf 'VERSION=%s\n' "$CRAFT_PROJECT_VERSION" > "$OUT/manifest"
-      install -Dm644 LICENSE "$OUT/licenses/LICENSE-villagesql-stat-ch"
+      install -Dm644 LICENSE "$OUT/licenses/LICENSE-$CRAFT_PROJECT_NAME"

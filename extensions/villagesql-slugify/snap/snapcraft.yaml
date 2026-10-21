@@ -10,8 +10,9 @@ description: |
     sudo snap install villagesql-slugify
     sudo snap connect villagesql:extensions villagesql-slugify:extensions
     sudo snap restart villagesql
+    sudo villagesql.mysql -uroot -e "INSTALL EXTENSION vsql_slugify;"
     sudo villagesql.mysql -uroot \
-      -e "INSTALL EXTENSION vsql_slugify; SELECT vsql_slugify.slugify('Hello, World!');"
+      -e "SELECT vsql_slugify.slugify('Hello, World!');"
 grade: devel
 confinement: strict
 
@@ -50,9 +51,10 @@ parts:
       cmake -S . -B build -DCMAKE_BUILD_TYPE=Release \
         -DVillageSQL_SDK_DIR="$PWD/sdk"
       cmake --build build
-      tar -tf build/vsql_slugify.veb
+      BUNDLE=vsql_slugify
+      tar -tf "build/$BUNDLE.veb"
       # Layout consumed by the villagesql snap, see docs/extensions.md.
       OUT="$CRAFT_PART_INSTALL/slugify"
-      install -Dm644 build/vsql_slugify.veb "$OUT/veb/vsql_slugify.veb"
+      install -Dm644 "build/$BUNDLE.veb" "$OUT/veb/$BUNDLE.veb"
       printf 'VERSION=%s\n' "$CRAFT_PROJECT_VERSION" > "$OUT/manifest"
-      install -Dm644 LICENSE "$OUT/licenses/LICENSE-villagesql-slugify"
+      install -Dm644 LICENSE "$OUT/licenses/LICENSE-$CRAFT_PROJECT_NAME"

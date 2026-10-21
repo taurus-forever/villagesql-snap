@@ -10,8 +10,9 @@ description: |
     sudo snap install villagesql-nanoid
     sudo snap connect villagesql:extensions villagesql-nanoid:extensions
     sudo snap restart villagesql
+    sudo villagesql.mysql -uroot -e "INSTALL EXTENSION vsql_nanoid;"
     sudo villagesql.mysql -uroot \
-      -e "INSTALL EXTENSION vsql_nanoid; SELECT vsql_nanoid.nanoid();"
+      -e "SELECT vsql_nanoid.nanoid();"
 grade: devel
 confinement: strict
 
@@ -51,9 +52,10 @@ parts:
       cmake -S . -B build -DCMAKE_BUILD_TYPE=Release \
         -DVillageSQL_SDK_DIR="$PWD/sdk"
       cmake --build build
-      tar -tf build/vsql_nanoid.veb
+      BUNDLE=vsql_nanoid
+      tar -tf "build/$BUNDLE.veb"
       # Layout consumed by the villagesql snap, see docs/extensions.md.
       OUT="$CRAFT_PART_INSTALL/nanoid"
-      install -Dm644 build/vsql_nanoid.veb "$OUT/veb/vsql_nanoid.veb"
+      install -Dm644 "build/$BUNDLE.veb" "$OUT/veb/$BUNDLE.veb"
       printf 'VERSION=%s\n' "$CRAFT_PROJECT_VERSION" > "$OUT/manifest"
-      install -Dm644 LICENSE "$OUT/licenses/LICENSE-villagesql-nanoid"
+      install -Dm644 LICENSE "$OUT/licenses/LICENSE-$CRAFT_PROJECT_NAME"

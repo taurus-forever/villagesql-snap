@@ -10,8 +10,9 @@ description: |
     sudo snap install villagesql-pgjwt
     sudo snap connect villagesql:extensions villagesql-pgjwt:extensions
     sudo snap restart villagesql
+    sudo villagesql.mysql -uroot -e "INSTALL EXTENSION vsql_pgjwt;"
     sudo villagesql.mysql -uroot \
-      -e "INSTALL EXTENSION vsql_pgjwt; SELECT vsql_pgjwt.jwt_sign('{"sub":"u"}', 's', 'HS256');"
+      -e "SELECT vsql_pgjwt.jwt_sign('{"sub":"u"}', 's', 'HS256');"
 grade: devel
 confinement: strict
 
@@ -51,9 +52,10 @@ parts:
       cmake -S . -B build -DCMAKE_BUILD_TYPE=Release \
         -DVillageSQL_SDK_DIR="$PWD/sdk"
       cmake --build build
-      tar -tf build/vsql_pgjwt.veb
+      BUNDLE=vsql_pgjwt
+      tar -tf "build/$BUNDLE.veb"
       # Layout consumed by the villagesql snap, see docs/extensions.md.
       OUT="$CRAFT_PART_INSTALL/pgjwt"
-      install -Dm644 build/vsql_pgjwt.veb "$OUT/veb/vsql_pgjwt.veb"
+      install -Dm644 "build/$BUNDLE.veb" "$OUT/veb/$BUNDLE.veb"
       printf 'VERSION=%s\n' "$CRAFT_PROJECT_VERSION" > "$OUT/manifest"
-      install -Dm644 LICENSE "$OUT/licenses/LICENSE-villagesql-pgjwt"
+      install -Dm644 LICENSE "$OUT/licenses/LICENSE-$CRAFT_PROJECT_NAME"

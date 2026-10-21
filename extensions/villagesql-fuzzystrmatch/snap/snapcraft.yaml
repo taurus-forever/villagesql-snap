@@ -1,7 +1,7 @@
 name: villagesql-fuzzystrmatch
 base: core26
 version: '0.0.1'
-summary: vsql_fuzzystrmatch extension for the VillageSQL snap (content interface)
+summary: vsql_fuzzystrmatch extension for the VillageSQL snap
 description: |
   Packages the upstream vsql-fuzzystrmatch extension (Soundex, Levenshtein,
   Metaphone and Double Metaphone matching (PostgreSQL fuzzystrmatch port))
@@ -9,10 +9,12 @@ description: |
   interface:
 
     sudo snap install villagesql-fuzzystrmatch
-    sudo snap connect villagesql:extensions villagesql-fuzzystrmatch:extensions
+    sudo snap connect villagesql:extensions \
+      villagesql-fuzzystrmatch:extensions
     sudo snap restart villagesql
+    sudo villagesql.mysql -uroot -e "INSTALL EXTENSION vsql_fuzzystrmatch;"
     sudo villagesql.mysql -uroot \
-      -e "INSTALL EXTENSION vsql_fuzzystrmatch; SELECT vsql_fuzzystrmatch.soundex('Robert');"
+      -e "SELECT vsql_fuzzystrmatch.soundex('Robert');"
 grade: devel
 confinement: strict
 
@@ -51,9 +53,10 @@ parts:
       cmake -S . -B build -DCMAKE_BUILD_TYPE=Release \
         -DVillageSQL_SDK_DIR="$PWD/sdk"
       cmake --build build
-      tar -tf build/vsql_fuzzystrmatch.veb
+      BUNDLE=vsql_fuzzystrmatch
+      tar -tf "build/$BUNDLE.veb"
       # Layout consumed by the villagesql snap, see docs/extensions.md.
       OUT="$CRAFT_PART_INSTALL/fuzzystrmatch"
-      install -Dm644 build/vsql_fuzzystrmatch.veb "$OUT/veb/vsql_fuzzystrmatch.veb"
+      install -Dm644 "build/$BUNDLE.veb" "$OUT/veb/$BUNDLE.veb"
       printf 'VERSION=%s\n' "$CRAFT_PROJECT_VERSION" > "$OUT/manifest"
-      install -Dm644 LICENSE "$OUT/licenses/LICENSE-villagesql-fuzzystrmatch"
+      install -Dm644 LICENSE "$OUT/licenses/LICENSE-$CRAFT_PROJECT_NAME"

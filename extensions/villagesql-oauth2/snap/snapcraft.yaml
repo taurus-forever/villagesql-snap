@@ -12,8 +12,9 @@ description: |
     sudo snap connect villagesql:extensions villagesql-oauth2:extensions
     sudo snap set villagesql vsql-allow-preview-extensions=ON
     sudo snap restart villagesql
+    sudo villagesql.mysql -uroot -e "INSTALL EXTENSION vsql_oauth2;"
     sudo villagesql.mysql -uroot \
-      -e "INSTALL EXTENSION vsql_oauth2; SELECT @@vsql_oauth2.jwks_refresh_interval;"
+      -e "SELECT @@vsql_oauth2.jwks_refresh_interval;"
 
   Preview extension: it uses VEF APIs that may change between VillageSQL
   releases and only loads when the server runs with
@@ -58,10 +59,11 @@ parts:
       cmake -S . -B build -DCMAKE_BUILD_TYPE=Release \
         -DVillageSQL_SDK_DIR="$PWD/sdk"
       cmake --build build
-      tar -tf build/vsql_oauth2.veb
+      BUNDLE=vsql_oauth2
+      tar -tf "build/$BUNDLE.veb"
       # Layout consumed by the villagesql snap, see docs/extensions.md.
       # libcurl is provided by the villagesql snap that loads the bundle.
       OUT="$CRAFT_PART_INSTALL/oauth2"
-      install -Dm644 build/vsql_oauth2.veb "$OUT/veb/vsql_oauth2.veb"
+      install -Dm644 "build/$BUNDLE.veb" "$OUT/veb/$BUNDLE.veb"
       printf 'VERSION=%s\n' "$CRAFT_PROJECT_VERSION" > "$OUT/manifest"
-      install -Dm644 LICENSE "$OUT/licenses/LICENSE-villagesql-oauth2"
+      install -Dm644 LICENSE "$OUT/licenses/LICENSE-$CRAFT_PROJECT_NAME"

@@ -11,10 +11,10 @@ description: |
     sudo snap install villagesql-statistics
     sudo snap connect villagesql:extensions villagesql-statistics:extensions
     sudo snap restart villagesql
-    sudo villagesql.mysql -uroot \
-      -e "INSTALL EXTENSION vsql_statistics;"
+    sudo villagesql.mysql -uroot -e "INSTALL EXTENSION vsql_statistics;"
 
-  The upstream tag is v.0.3; the bundle's manifest says 0.5.0 and the snap version follows the manifest.
+  The upstream tag is v.0.3; the bundle's manifest says 0.5.0 and the snap
+  version follows the manifest.
 grade: devel
 confinement: strict
 
@@ -53,9 +53,10 @@ parts:
       cmake -S . -B build -DCMAKE_BUILD_TYPE=Release \
         -DVillageSQL_SDK_DIR="$PWD/sdk"
       cmake --build build
-      tar -tf build/vsql_statistics.veb
+      BUNDLE=vsql_statistics
+      tar -tf "build/$BUNDLE.veb"
       # Layout consumed by the villagesql snap, see docs/extensions.md.
       OUT="$CRAFT_PART_INSTALL/statistics"
-      install -Dm644 build/vsql_statistics.veb "$OUT/veb/vsql_statistics.veb"
+      install -Dm644 "build/$BUNDLE.veb" "$OUT/veb/$BUNDLE.veb"
       printf 'VERSION=%s\n' "$CRAFT_PROJECT_VERSION" > "$OUT/manifest"
-      install -Dm644 LICENSE "$OUT/licenses/LICENSE-villagesql-statistics"
+      install -Dm644 LICENSE "$OUT/licenses/LICENSE-$CRAFT_PROJECT_NAME"

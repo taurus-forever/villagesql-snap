@@ -11,8 +11,7 @@ description: |
     sudo snap install villagesql-ai
     sudo snap connect villagesql:extensions villagesql-ai:extensions
     sudo snap restart villagesql
-    sudo villagesql.mysql -uroot \
-      -e "INSTALL EXTENSION vsql_ai;"
+    sudo villagesql.mysql -uroot -e "INSTALL EXTENSION vsql_ai;"
 grade: devel
 confinement: strict
 
@@ -52,10 +51,12 @@ parts:
       cmake -S . -B build -DCMAKE_BUILD_TYPE=Release \
         -DVillageSQL_SDK_DIR="$PWD/sdk"
       cmake --build build
-      tar -tf build/vsql_ai.veb
+      BUNDLE=vsql_ai
+      tar -tf "build/$BUNDLE.veb"
       # Layout consumed by the villagesql snap, see docs/extensions.md.
       OUT="$CRAFT_PART_INSTALL/ai"
-      install -Dm644 build/vsql_ai.veb "$OUT/veb/vsql_ai.veb"
+      install -Dm644 "build/$BUNDLE.veb" "$OUT/veb/$BUNDLE.veb"
       printf 'VERSION=%s\n' "$CRAFT_PROJECT_VERSION" > "$OUT/manifest"
-      install -Dm644 LICENSE "$OUT/licenses/LICENSE-villagesql-ai"
-      install -Dm644 THIRD_PARTY_LICENSES.md "$OUT/licenses/THIRD_PARTY_LICENSES.md-villagesql-ai"
+      install -Dm644 LICENSE "$OUT/licenses/LICENSE-$CRAFT_PROJECT_NAME"
+      install -Dm644 THIRD_PARTY_LICENSES.md \
+        "$OUT/licenses/THIRD_PARTY_LICENSES-$CRAFT_PROJECT_NAME.md"
