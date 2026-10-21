@@ -14,6 +14,9 @@ on:
       artifact-prefix:
         description: build_snap.yaml `artifact-prefix` output
         value: ${{ jobs.build.outputs.artifact-prefix }}
+      extension-artifact-prefix:
+        description: Prefix of the extension (provider) snap artifacts
+        value: packed-extension
 
 jobs:
   lint-workflows:
@@ -53,6 +56,47 @@ jobs:
       contents: read
     cache-mode: none
 
+  list-extensions:
+    name: List extension snaps
+    # The build matrix is the directory tree, so a new provider directory
+    # cannot be left out of the build.
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      extensions: ${{ steps.list.outputs.extensions }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: List extensions/ directories as JSON
+        id: list
+        run: |
+          list="$(ls -d extensions/*/ | xargs -n1 basename | jq -R . | jq -sc .)"
+          echo "$list"
+          echo "extensions=$list" >> "$GITHUB_OUTPUT"
+    permissions: {}
+    cache-mode: none
+
+  build-extensions:
+    name: Build extension snap | ${{ matrix.extension }}
+    needs:
+      - list-extensions
+    uses: canonical/data-platform-workflows/.github/workflows/build_snap.yaml@v53.0.0
+    strategy:
+      fail-fast: false
+      matrix:
+        extension: ${{ fromJSON(needs.list-extensions.outputs.extensions) }}
+    with:
+      path-to-snap-project-directory: extensions/${{ matrix.extension }}
+      artifact-prefix: packed-extension
+      # A C++ provider packs in minutes; the Rust ones compile their
+      # dependency tree; villagesql-duckdb clones and builds DuckDB itself.
+      build-timeout: ${{ matrix.extension == 'villagesql-duckdb' && 300 || 60 }}
+    permissions:
+      contents: read
+    cache-mode: none
+
   test:
     name: Test snap | ${{ matrix.base.version }} ${{ matrix.platform.arch }}
     # `snapcraft test` runs the whole suite on three systems: ~16 min on 12
@@ -74,6 +118,7 @@ jobs:
       - lint-workflows
       - lint
       - build
+      - build-extensions
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -84,6 +129,17 @@ jobs:
         with:
           pattern: ${{ needs.build.outputs.artifact-prefix }}-*-${{ matrix.platform.arch }}
           merge-multiple: true
+      - name: Download extension snap(s)
+        # build_snap.yaml uploads `extensions/<name>/*.snap` plus `.empty` at
+        # the repository root, so the artifact keeps that layout and a merged
+        # download lands every provider snap in its own extensions/<name>/,
+        # where the extension_snap* spread tests expect it.
+        uses: actions/download-artifact@v8
+        with:
+          pattern: packed-extension-*--platform-${{ matrix.platform.arch }}
+          merge-multiple: true
+      - name: Extension snaps are next to their projects
+        run: ls -l extensions/*/*.snap
       - name: Add pipx to PATH
         run: |
           echo "${HOME}/.local/bin" >> "${GITHUB_PATH}"
@@ -102,10 +158,6 @@ jobs:
           sudo iptables -F FORWARD
           sudo iptables -P FORWARD ACCEPT
           sudo snap install snapcraft --classic
-          # Extension snaps used by the extension_snap_* spread tests
-          for ext in extensions/*/; do
-            (cd "$ext" && sudo --user "$USER" --preserve-env --preserve-env=PATH -- env -- snapcraft pack)
-          done
           sudo --user "$USER" --preserve-env --preserve-env=PATH -- env -- snapcraft test
     permissions: {}
     cache-mode: none

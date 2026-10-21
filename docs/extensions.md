@@ -32,7 +32,40 @@ sudo villagesql.mysql -uroot -e "INSTALL EXTENSION vsql_hello; SELECT hello('sna
 Snaps from the same publisher connect automatically. Disconnecting (or
 removing) the provider and restarting the service removes its bundles; run
 `UNINSTALL EXTENSION` first so the server does not keep a stale registration.
-Two example providers live in [`extensions/`](/extensions/).
+
+Every extension of the upstream catalogue is available this way, one
+provider snap each, all named `villagesql-<name>`:
+
+| Snap | Bundle | | Snap | Bundle |
+| --- | --- | --- | --- | --- |
+| `villagesql-ai` | `vsql_ai` | | `villagesql-network-address` | `vsql_network_address` |
+| `villagesql-boolean` | `vsql_boolean` | | `villagesql-oauth2` | `vsql_oauth2` (preview) |
+| `villagesql-crypto` | `vsql_crypto` | | `villagesql-pgjwt` | `vsql_pgjwt` |
+| `villagesql-cube` | `vsql_cube` | | `villagesql-rest` | `vsql_rest` (preview) |
+| `villagesql-currency` | `vsql_currency` | | `villagesql-slugify` | `vsql_slugify` |
+| `villagesql-duckdb` | `vsql_duckdb` (preview) | | `villagesql-stat-ch` | `vsql_stat_ch` (preview) |
+| `villagesql-fuzzystrmatch` | `vsql_fuzzystrmatch` | | `villagesql-statistics` | `vsql_statistics` |
+| `villagesql-http` | `vsql_http` | | `villagesql-trgm` | `vsql_trgm` |
+| `villagesql-luhn` | `vsql_luhn` | | `villagesql-uuid` | `vsql_uuid` |
+| `villagesql-mcp` | `vsql_mcp` (preview) | | `villagesql-address-standardizer` | `vsql_address_standardizer` |
+| `villagesql-nanoid` | `vsql_nanoid` | | `villagesql-hello` | `vsql_hello` (example) |
+
+The sources, pins and one-line descriptions are in
+[`extensions/README.md`](/extensions/README.md).
+
+### Preview extensions
+
+`vsql_rest`, `vsql_oauth2`, `vsql_stat_ch`, `vsql_mcp` and `vsql_duckdb` use
+VEF APIs that upstream may still change. The server refuses to install them
+unless preview extensions are allowed:
+
+```shell
+sudo snap set villagesql vsql-allow-preview-extensions=ON   # restarts the server
+sudo villagesql.mysql -uroot -e "INSTALL EXTENSION vsql_rest; SELECT @@vsql_rest.port;"
+```
+
+`sudo snap unset villagesql vsql-allow-preview-extensions` switches it off
+again (uninstall the preview extensions first).
 
 ## How it works
 
@@ -79,7 +112,14 @@ slots:
 ```
 
 `$SNAP/<dir>/` must contain `veb/<name>.veb` (or `veb/<name>-<version>.veb`)
-and may contain `manifest` with a `VERSION=` line. Build the bundle against
+and may contain `manifest` with a `VERSION=` line.
+
+**Libraries a bundle may link against.** `mysqld` dlopens the bundle's
+shared object inside the `villagesql` snap, so every library it needs must
+be there: the core26 base (glibc, libstdc++, zlib), `libssl`/`libcrypto` 3,
+`libcurl` 4, `liblz4` 1, `libzstd` 1, `libaio`, `libnuma` and `libtirpc`.
+Anything else has to be linked statically into the bundle, or added to the
+server snap's `stage-packages` first. Build the bundle against
 the published SDK tarball of the same VillageSQL version
 (`villagesql-extension-sdk-0.0.7.tar.gz` from the upstream GitHub release):
 no server build is needed, a provider builds in seconds. See

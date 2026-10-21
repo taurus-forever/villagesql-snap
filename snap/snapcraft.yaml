@@ -134,6 +134,13 @@ parts:
       - libssl3t64
       - libtirpc3t64
       - util-linux
+      # Shared libraries that upstream extension bundles link against
+      # (vsql_http, vsql_oauth2, vsql_duckdb: libcurl, staged above for the
+      # server itself; vsql_stat_ch: lz4 and zstd). mysqld dlopens the
+      # bundles, so their libraries must live in this snap; see "Libraries a
+      # bundle may link against" in docs/extensions.md.
+      - liblz4-1
+      - libzstd1
     override-pull: |
       craftctl default
       # MySQL Cluster (NDB) is not built (WITH_NDB=OFF) but upstream still

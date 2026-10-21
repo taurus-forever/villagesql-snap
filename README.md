@@ -57,7 +57,9 @@ sudo villagesql.extensions list
 sudo villagesql.mysql -uroot -e "INSTALL EXTENSION vsql_hello; SELECT hello('snap');"
 ```
 
-See [docs/extensions.md](docs/extensions.md) and the example providers in
+Every extension of the upstream catalogue is packaged this way
+(`villagesql-crypto`, `villagesql-uuid`, `villagesql-http`, ... 21 in all);
+see [docs/extensions.md](docs/extensions.md) and the provider projects in
 [`extensions/`](extensions/).
 
 ## Build the snap
@@ -92,8 +94,9 @@ snapcraft test --debug                                    # open a shell in a fa
 tox run -e lint                                           # yamllint
 ```
 
-The `extension_snap_*` tests expect the example extension snaps to be packed
-next to their `snap/` directories, see [`extensions/`](/extensions/).
+The `extension_snap*` tests expect the extension snaps to be packed next to
+their `snap/` directories (`extension_snaps_all` needs all of them, DuckDB
+excepted), see [`extensions/`](/extensions/).
 
 ## License and trademark
 
