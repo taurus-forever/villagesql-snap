@@ -54,6 +54,33 @@ parts:
       set -e
       rustup default stable
       cargo install cargo-vsql --locked --version 0.0.6
+      # Upstream pins tiny_http 0.12 -> rustls 0.20 -> ring 0.16, and ring
+      # 0.16 never got a riscv64 port: its build script panics on any target
+      # outside x86/arm, and ChaCha20, P-256/P-384 and X25519 exist there
+      # only as x86/arm assembly. rustls 0.21 keeps the API tiny_http and
+      # vsql-mcp call (PrivateKey, Certificate, ServerConfig::builder,
+      # sign::any_supported_type) and builds on ring 0.17, which supports
+      # riscv64. Manifests only, no source changes; applied on every
+      # architecture so CI builds and tests the tree riscv64 ships.
+      cargo fetch
+      TINY_HTTP="$(ls -d "$HOME/.cargo/registry/src/"*/tiny_http-0.12.0)"
+      cp -a "$TINY_HTTP" vendor-tiny_http
+      sed -i '/^\[dependencies\.rustls\]$/{n;s/^version = "0.20"$/version = "0.21"/}' \
+        vendor-tiny_http/Cargo.toml
+      grep -A1 '^\[dependencies\.rustls\]$' vendor-tiny_http/Cargo.toml | grep -q 'version = "0.21"'
+      sed -i 's/^rustls = "0.20"$/rustls = "0.21"/' Cargo.toml
+      # rustls 0.20 turned on webpki's std feature for the whole tree (that
+      # is where vsql-mcp's RSA signature algorithms come from); rustls 0.21
+      # uses rustls-webpki instead, so name the feature.
+      sed -i 's/^webpki = "0.22"$/webpki = { version = "0.22", features = ["std"] }/' Cargo.toml
+      grep -q '^rustls = "0.21"$' Cargo.toml
+      grep -q '^webpki = { version = "0.22", features = \["std"\] }$' Cargo.toml
+      printf '\n[patch.crates-io]\ntiny_http = { path = "vendor-tiny_http" }\n' >> Cargo.toml
+      cargo update -p rustls --precise 0.21.12
+      if grep -A1 '^name = "ring"$' Cargo.lock | grep -q 'version = "0.16'; then
+        echo "ring 0.16 is still in Cargo.lock; it does not build on riscv64" >&2
+        exit 1
+      fi
       # Release build; writes dist/vsql_mcp.veb (manifest.json plus
       # lib/vsql_mcp.so) without a server checkout.
       cargo vsql package

@@ -94,6 +94,12 @@ serves the `8.4`, `9.7` and `percona-8.4` tracks of the `villagesql` snap
 alike; providers are published on `latest` only. Store-installed providers
 auto-connect (same publisher); side-loaded ones need `snap connect`.
 
+`villagesql-mcp` is built with rustls 0.21 instead of the 0.20 upstream pins
+(a manifest-only change in its `snapcraft.yaml`): rustls 0.20 sits on ring
+0.16, which has no riscv64 port, while 0.21 keeps the same API on ring 0.17.
+Drop the override once [vsql-mcp](https://github.com/villagesql/vsql-mcp)
+moves off rustls 0.20.
+
 The spread tests expect the packed snaps next to their `snap/` directories:
 `extension_snap_hello` and `extension_snap_uuid` are the detailed
 walkthroughs, `extension_snaps_all` connects every other provider to one
